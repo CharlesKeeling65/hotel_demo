@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>易宿 - 酒店新增/修改</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            color: #333;
+        }
+        /* 顶部导航 - 复用统一风格 */
+        .top-nav {
+            background: linear-gradient(90deg, #6a85b6 0%, #8b9abc 100%);
+            color: #fff;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .nav-logo .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logout-btn {
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        /* 主容器 */
+        .container {
+            max-width: 1200px;
+            margin: 32px auto;
+            padding: 0 32px;
+        }
+        /* 页面标题 */
+        .page-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .page-title .btn-back {
+            font-size: 16px;
+            color: #409eff;
+            text-decoration: none;
+            margin-right: 20px;
+        }
+        /* 表单容器 */
+        .form-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 32px;
+        }
+        /* 表单网格布局 */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        .form-item {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        /* 表单标签 */
+        .form-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+        }
+        .form-label.required::after {
+            content: '*';
+            color: #f56c6c;
+            margin-left: 4px;
+        }
+        /* 表单输入框/选择框 */
+        .form-input, .form-select, .form-textarea {
+            padding: 10px 16px;
+            border: 1px solid #dcdcdc;
+            border-radius: 4px;
+            font-size: 16px;
+            color: #333;
+            transition: border 0.3s;
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: #409eff;
+            box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
+        }
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        /* 多标签输入提示 */
+        .form-tip {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
+        }
+        /* 按钮组 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 24px;
+        }
+        .btn {
+            padding: 12px 32px;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+        .btn-primary {
+            background: #409eff;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background: #337ecc;
+        }
+        .btn-default {
+            background: #f5f7fa;
+            color: #666;
+            border: 1px solid #dcdcdc;
+        }
+        .btn-default:hover {
+            background: #eef2f7;
+        }
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-card {
+                padding: 20px;
+            }
+            .btn-group {
+                flex-direction: column;
+            }
+            .btn {
+                width: 100%;
+            }
+        }
+        /* 图片上传与预览 */
+        .image-section-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 8px 0 12px;
+        }
+        .image-uploader {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .image-uploader input[type="file"] {
+            padding: 8px;
+            border: 1px solid #dcdcdc;
+            border-radius: 4px;
+            background: #fff;
+        }
+        .image-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .image-item {
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            background: #f8f9fa;
+            aspect-ratio: 16 / 9; /* 1280×720 推荐比例 */
+        }
+        .image-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .image-remove {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            padding: 4px 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <div class="top-nav">
+        <div class="nav-logo">
+            <div class="logo-icon">🏨</div>
+            <span>易宿酒店商家管理后台</span>
+        </div>
+        <div class="user-info">
+            <span id="userWelcome">欢迎</span>
+            <button class="logout-btn" id="logoutBtn">退出登录</button>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 页面标题 + 返回按钮 -->
+        <div class="page-title">
+            <a href="dashboard.html" class="btn-back">← 返回酒店列表</a>
+            <span id="pageTitleText">新增酒店信息</span>
+        </div>
+
+        <!-- 表单卡片 -->
+        <div class="form-card">
+            <form id="hotelForm">
+                <!-- 隐藏域：存储酒店ID（新增为0，修改为对应id） -->
+                <input type="hidden" id="hotelId" name="hotelId" value="0">
+                
+                <div class="form-grid">
+                    <!-- 酒店名称（中）- 必填 -->
+                    <div class="form-item">
+                        <label class="form-label required" for="name">酒店名称（中文）</label>
+                        <input type="text" class="form-input" id="name" name="name" placeholder="请输入酒店中文名称">
+                    </div>
+
+                    <!-- 酒店名称（英） -->
+                    <div class="form-item">
+                        <label class="form-label" for="nameEn">酒店名称（英文）</label>
+                        <input type="text" class="form-input" id="nameEn" name="nameEn" placeholder="请输入酒店英文名称（选填）">
+                    </div>
+
+                    <!-- 酒店星级 - 必填 -->
+                    <div class="form-item">
+                        <label class="form-label required" for="star">酒店星级</label>
+                        <select class="form-select" id="star" name="star">
+                            <option value="">请选择酒店星级</option>
+                            <option value="⭐⭐⭐ 三星级">⭐⭐⭐ 三星级</option>
+                            <option value="⭐⭐⭐⭐ 四星级">⭐⭐⭐⭐ 四星级</option>
+                            <option value="⭐⭐⭐⭐⭐ 五星级">⭐⭐⭐⭐⭐ 五星级</option>
+                            <option value="轻奢精品 无星级">轻奢精品 无星级</option>
+                        </select>
+                    </div>
+
+                    <!-- 开业时间 - 必填 -->
+                    <div class="form-item">
+                        <label class="form-label required" for="openTime">开业时间</label>
+                        <input type="date" class="form-input" id="openTime" name="openTime">
+                    </div>
+
+                    <!-- 酒店地址 - 必填 -->
+                    <div class="form-item" style="grid-column: 1 / -1;">
+                        <label class="form-label required" for="address">酒店详细地址</label>
+                        <input type="text" class="form-input" id="address" name="address" placeholder="请输入省市区+详细地址，如：上海市浦东新区滨海大道188号">
+                    </div>
+
+                    <!-- 基础价格区间 - 必填 -->
+                    <div class="form-item">
+                        <label class="form-label required" for="priceRange">基础价格区间</label>
+                        <input type="text" class="form-input" id="priceRange" name="priceRange" placeholder="请输入价格区间，如：880元 - 6880元/晚">
+                    </div>
+
+                    <!-- 总客房数 - 必填 -->
+                    <div class="form-item">
+                        <label class="form-label required" for="totalRooms">总客房数</label>
+                        <input type="number" class="form-input" id="totalRooms" name="totalRooms" placeholder="请输入总客房数量" min="1">
+                    </div>
+
+                    <!-- 酒店房型 - 必填（多标签用逗号分隔） -->
+                    <div class="form-item" style="grid-column: 1 / -1;">
+                        <label class="form-label required" for="roomTypes">酒店房型</label>
+                        <input type="text" class="form-input" id="roomTypes" name="roomTypes" placeholder="多个房型用英文逗号分隔，热门房型加（热门），如：海景大床房,海景别墅（热门）">
+                        <div class="form-tip">提示：多个房型用【英文逗号】分隔，例：商务大床房,行政套房（热门）,亲子主题房</div>
+                    </div>
+
+                    <!-- 附近热门景点 - 选填 -->
+                    <div class="form-item" style="grid-column: 1 / -1;">
+                        <label class="form-label" for="scenicSpots">附近热门景点</label>
+                        <input type="text" class="form-input" id="scenicSpots" name="scenicSpots" placeholder="多个景点用英文逗号分隔，如：东方明珠（1.2km）,外滩（2.5km）">
+                    </div>
+
+                    <!-- 交通及商场 - 选填 -->
+                    <div class="form-item" style="grid-column: 1 / -1;">
+                        <label class="form-label" for="trafficMall">交通及周边商场</label>
+                        <input type="text" class="form-input" id="trafficMall" name="trafficMall" placeholder="多个信息用英文逗号分隔，如：地铁2号线（300m）,滨海万达广场（500m）">
+                    </div>
+
+                    <!-- 当前优惠活动 - 选填 -->
+                    <div class="form-item" style="grid-column: 1 / -1;">
+                        <label class="form-label" for="discounts">当前优惠活动</label>
+                        <textarea class="form-textarea" id="discounts" name="discounts" placeholder="多个优惠用英文逗号分隔，如：春节特惠8折,机票+酒店套餐立减300元"></textarea>
+                    </div>
+                    <!-- 房型列表 JSON - 允许输入房型明细以回显在详情页 -->
+                    <div class="form-item" style="grid-column: 1 / -1;">
+                        <label class="form-label" for="priceListJson">房型明细（JSON 数组）</label>
+                        <div style="display:flex;gap:8px;align-items:flex-start;">
+                            <textarea class="form-textarea" id="priceListJson" name="priceListJson" placeholder='示例：[{"type":"海景大床房","original":1100,"current":880,"discount":"8折","remain":18,"status":"available","remark":"含双人早餐"}]' style="flex:1;"></textarea>
+                            <div style="display:flex;flex-direction:column;gap:8px;">
+                                <button type="button" class="btn btn-default" id="editRoomsBtn">编辑房型明细</button>
+                                <div class="form-tip">点击编辑可在新页面新增/修改多条房型</div>
+                            </div>
+                        </div>
+                        <div class="form-tip">可选：填写房型明细 JSON，提交后将用于房型概览回显（也可在管理员通过后编辑）</div>
+                    </div>
+                </div>
+
+                <!-- 酒店配图（单张，按id映射pic/hotel_{id}.png，可本地上传覆盖） -->
+                <div class="form-item" style="grid-column: 1 / -1;">
+                    <label class="form-label" for="hotelImage">酒店配图（单张）</label>
+                    <div class="image-section-title">默认：pic/hotel_{id}.png；上传后覆盖默认图（推荐尺寸：1280×720，16:9）</div>
+                    <div class="image-uploader">
+                        <input type="file" id="imageInput" accept="image/*">
+                        <span class="form-tip">仅支持单张；不上传则使用默认映射图片</span>
+                    </div>
+                    <div class="image-gallery" id="imageGallery"></div>
+                </div>
+
+                <!-- 按钮组 -->
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" id="submitBtn">确认提交</button>
+                    <button type="reset" class="btn btn-default">重置表单</button>
+                    <button type="button" class="btn" id="deleteBtn" style="background:#f56c6c;color:#fff;display:none;">删除酒店</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ===================== 1. 解析URL参数（区分新增/修改） =====================
+        function getUrlParam(key) {
+            const params = new URLSearchParams(window.location.search);
+            return parseInt(params.get(key)) || 0;
+        }
+        // 获取当前酒店ID（无ID=新增，有ID=修改）
+        const editHotelId = getUrlParam('id');
+        const isEdit = editHotelId > 0; // 是否为修改模式
+
+        // ===================== 2. 模拟酒店数据源（与详情页一致，本地测试用） =====================
+        const hotelData = [
+            {
+                id: 1,
+                name: "海景度假酒店",
+                nameEn: "Seaview Resort Hotel",
+                star: "⭐⭐⭐⭐⭐ 五星级",
+                openTime: "2018-06-18",
+                address: "上海市浦东新区滨海大道188号（近东方明珠）",
+                priceRange: "880元 - 6880元/晚",
+                totalRooms: 280,
+                roomTypes: "海景大床房,海景双床房,豪华套房,亲子主题房,海景别墅（热门）",
+                scenicSpots: "东方明珠（1.2km）,外滩（2.5km）,上海海洋公园（3.0km）,陆家嘴中心（0.8km）",
+                trafficMall: "地铁2号线滨海站（300m）,滨海万达广场（500m）,浦东国际机场（25km）,上海火车站（18km）",
+                discounts: "春节特惠：全场房型8折（截止2026.02.24）,机票+酒店套餐：立减300元/人,连住3晚及以上：赠送双人早餐+温泉体验券,新用户首次预订：立减100元"
+            },
+            {
+                id: 2,
+                name: "城市商务酒店",
+                nameEn: "City Business Hotel",
+                star: "⭐⭐⭐⭐ 四星级",
+                openTime: "2015-10-01",
+                address: "北京市朝阳区建国门外大街66号（近国贸中心）",
+                priceRange: "580元 - 2880元/晚",
+                totalRooms: 320,
+                roomTypes: "商务大床房,商务双床房,行政套房,精品单间,会议室配套房（热门）",
+                scenicSpots: "国贸三期（0.3km）,天安门广场（3.8km）,故宫（4.2km）,三里屯太古里（1.5km）",
+                trafficMall: "地铁1号线国贸站（200m）,SKP购物中心（0.5km）,北京首都机场（28km）,北京南站（12km）",
+                discounts: "商务出行特惠：连住2晚立减150元,企业协议价：享7.5折+免费会议室1小时,机票+酒店套餐：立减200元/人,新用户首次预订：立减80元"
+            },
+            {
+                id: 3,
+                name: "山水温泉酒店",
+                nameEn: "Shanshui Hot Spring Hotel",
+                star: "⭐⭐⭐⭐ 四星级",
+                openTime: "2017-08-15",
+                address: "杭州市西湖区龙井路128号（近西湖龙井村）",
+                priceRange: "680元 - 3880元/晚",
+                totalRooms: 200,
+                roomTypes: "温泉大床房,温泉双床房,山景套房,亲子温泉房,独栋温泉别墅（热门）",
+                scenicSpots: "西湖（1.8km）,龙井村（0.5km）,灵隐寺（3.2km）,河坊街（2.5km）",
+                trafficMall: "地铁10号线龙井站（800m）,西湖银泰城（2.0km）,杭州萧山机场（35km）,杭州东站（15km）",
+                discounts: "春节特惠：全场房型8.5折（截止2026.02.24）,温泉+酒店套餐：立减260元/2人,连住2晚及以上：赠送双人温泉票+龙井茶叶伴手礼,新用户首次预订：立减120元"
+            }
+        ];
+
+        // ===================== 3. 页面初始化（新增/修改模式区分） =====================
+        window.onload = function() {
+            // 顶部用户显示与退出（sessionStorage）
+            (function(){
+                const welcome = document.getElementById('userWelcome');
+                const logoutBtn = document.getElementById('logoutBtn');
+                const name = sessionStorage.getItem('username') || '';
+                const role = sessionStorage.getItem('role') || 'user';
+                if (welcome) welcome.textContent = name ? `欢迎，${name}（${role}）` : '欢迎，商户';
+                if (logoutBtn) logoutBtn.addEventListener('click', () => {
+                    try { sessionStorage.removeItem('username'); sessionStorage.removeItem('role'); } catch(e){}
+                    window.location.href = 'loginPage.html';
+                });
+            })();
+            const pageTitleText = document.getElementById('pageTitleText');
+            const hotelIdInput = document.getElementById('hotelId');
+            const hotelForm = document.getElementById('hotelForm');
+            // 单图上传事件绑定与预览初始化
+            const imageInput = document.getElementById('imageInput');
+            imageInput.addEventListener('change', handleImageUploadSingle);
+            initImageSection();
+
+            // 房型明细编辑按钮
+            const editRoomsBtn = document.getElementById('editRoomsBtn');
+            if (editRoomsBtn) {
+                editRoomsBtn.addEventListener('click', () => {
+                    const targetId = editHotelId || 0;
+                    window.location.href = 'hotel-rooms.html?id=' + targetId;
+                });
+            }
+
+            // 加载房型草稿（若存在），优先填充到 textarea
+            (function loadPriceDraft(){
+                try {
+                    const key = 'priceListDraft:' + (editHotelId || 0);
+                    const draft = localStorage.getItem(key);
+                    if (draft) {
+                        const txtEl = document.getElementById('priceListJson');
+                        if (txtEl && !txtEl.value.trim()) txtEl.value = JSON.stringify(JSON.parse(draft), null, 2);
+                    }
+                } catch(e){}
+            })();
+
+            // 🔹 修改模式：预填表单数据
+            if (isEdit) {
+                pageTitleText.innerText = '修改酒店信息';
+                hotelIdInput.value = editHotelId;
+                // 匹配对应酒店数据
+                const currentHotel = hotelData.find(item => item.id === editHotelId);
+                if (currentHotel) {
+                    // 预填所有字段
+                    document.getElementById('name').value = currentHotel.name || '';
+                    document.getElementById('nameEn').value = currentHotel.nameEn || '';
+                    document.getElementById('star').value = currentHotel.star || '';
+                    document.getElementById('openTime').value = currentHotel.openTime || '';
+                    document.getElementById('address').value = currentHotel.address || '';
+                    document.getElementById('priceRange').value = currentHotel.priceRange || '';
+                    document.getElementById('totalRooms').value = currentHotel.totalRooms || '';
+                    document.getElementById('roomTypes').value = currentHotel.roomTypes || '';
+                    document.getElementById('scenicSpots').value = currentHotel.scenicSpots || '';
+                    document.getElementById('trafficMall').value = currentHotel.trafficMall || '';
+                    document.getElementById('discounts').value = currentHotel.discounts || '';
+                    // 预填房型明细 JSON（若存在 priceData）
+                    try {
+                        const exist = currentHotel.priceData && currentHotel.priceData.roomPriceList ? currentHotel.priceData.roomPriceList : [];
+                        document.getElementById('priceListJson').value = JSON.stringify(exist, null, 2);
+                    } catch (e) { document.getElementById('priceListJson').value = ''; }
+                } else {
+                    alert('未找到该酒店信息，将跳转为新增模式');
+                    pageTitleText.innerText = '新增酒店信息';
+                    hotelIdInput.value = 0;
+                }
+                // 显示删除按钮（仅修改模式可见）
+                const delBtn = document.getElementById('deleteBtn');
+                if (delBtn) {
+                    delBtn.style.display = 'inline-block';
+                    delBtn.addEventListener('click', function(){
+                        if (!confirm('确认删除该酒店？该操作将从商家提交和已审核列表中移除该酒店及关联数据。')) return;
+                        const id = editHotelId;
+                        try {
+                            let merchants = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
+                            merchants = merchants.filter(h => h.id !== id);
+                            localStorage.setItem('merchantHotels', JSON.stringify(merchants));
+                        } catch(e){}
+                        try {
+                            let approved = JSON.parse(localStorage.getItem('hotels') || '[]');
+                            approved = approved.filter(h => h.id !== id);
+                            localStorage.setItem('hotels', JSON.stringify(approved));
+                        } catch(e){}
+                        try { localStorage.removeItem('hotelImage:' + id); } catch(e){}
+                        try { localStorage.removeItem('hotelRooms:' + id); } catch(e){}
+                        try { localStorage.removeItem('hotelOrders:' + id); } catch(e){}
+                        try { localStorage.removeItem('priceListDraft:' + id); } catch(e){}
+                        window.location.href = 'dashboard.html';
+                    });
+                }
+            } else {
+                // 🔹 新增模式：表单清空（默认已空）
+                pageTitleText.innerText = '新增酒店信息';
+                hotelIdInput.value = 0;
+            }
+
+            // ===================== 4. 提交按钮点击事件 =====================
+            document.getElementById('submitBtn').addEventListener('click', function() {
+                // 表单验证
+                if (!validateForm()) {
+                    return;
+                }
+
+                // 获取表单数据
+                const formData = getFormData();
+                // 追加单图数据（DataURL）
+                formData.image = getCurrentImage();
+
+                // 提交接口请求
+                submitHotelData(formData)
+                    .then(res => {
+                        alert(res.msg || '操作成功！');
+                        // 将单图持久化到 localStorage（按酒店ID）
+                        const savedId = formData.id && formData.id > 0 ? formData.id : (editHotelId || 0);
+                        const key = 'hotelImage:' + (savedId > 0 ? savedId : formData.id);
+                        if (formData.image) {
+                            localStorage.setItem(key, formData.image);
+                        } else {
+                            // 未上传则不写入，让详情页走默认图
+                        }
+                        // 若为新增，写入管理员审核队列
+                        try {
+                            const submissionsKey = 'merchantHotels';
+                            const list = JSON.parse(localStorage.getItem(submissionsKey) || '[]');
+                            // 新增模式：editHotelId为0或formData.id为新生成
+                            const isNew = !isEdit || (formData.id && formData.id > 0 && editHotelId === 0);
+                            if (isNew) {
+                                        // 包含 priceData（若有）以便详情回显
+                                        list.push({
+                                            id: formData.id || Date.now(),
+                                            name: formData.name,
+                                            nameEn: formData.nameEn,
+                                            star: formData.star,
+                                            openTime: formData.openTime,
+                                            address: formData.address,
+                                            priceRange: formData.priceRange,
+                                            totalRooms: formData.totalRooms,
+                                            roomTypes: formData.roomTypes,
+                                            priceData: formData.priceData || { roomPriceList: [] },
+                                            image: formData.image || '',
+                                            status: 'pending',
+                                            createdBy: 'user',
+                                            createdAt: new Date().toISOString()
+                                        });
+                                localStorage.setItem(submissionsKey, JSON.stringify(list));
+                            }
+                        } catch (e) { /* 忽略localStorage异常 */ }
+                        // 提交成功后，移除房型草稿（若有）
+                        try { localStorage.removeItem('priceListDraft:' + (savedId || 0)); } catch(e) {}
+                        // 跳转回酒店列表页（自动刷新数据）
+                        window.location.href = 'dashboard.html';
+                    })
+                    .catch(err => {
+                        alert('操作失败：' + (err.msg || '网络异常，请稍后重试'));
+                    });
+            });
+        };
+
+        // ===================== 5. 表单验证 =====================
+        function validateForm() {
+            const name = document.getElementById('name').value.trim();
+            const star = document.getElementById('star').value;
+            const openTime = document.getElementById('openTime').value;
+            const address = document.getElementById('address').value.trim();
+            const priceRange = document.getElementById('priceRange').value.trim();
+            const totalRooms = document.getElementById('totalRooms').value;
+            const roomTypes = document.getElementById('roomTypes').value.trim();
+
+            if (!name) {
+                alert('请输入酒店中文名称！');
+                document.getElementById('name').focus();
+                return false;
+            }
+            if (!star) {
+                alert('请选择酒店星级！');
+                document.getElementById('star').focus();
+                return false;
+            }
+            if (!openTime) {
+                alert('请选择开业时间！');
+                document.getElementById('openTime').focus();
+                return false;
+            }
+            if (!address) {
+                alert('请输入酒店详细地址！');
+                document.getElementById('address').focus();
+                return false;
+            }
+            if (!priceRange) {
+                alert('请输入基础价格区间！');
+                document.getElementById('priceRange').focus();
+                return false;
+            }
+            if (!totalRooms || totalRooms < 1) {
+                alert('请输入有效的总客房数（至少1间）！');
+                document.getElementById('totalRooms').focus();
+                return false;
+            }
+            if (!roomTypes) {
+                alert('请输入酒店房型（多个用英文逗号分隔）！');
+                document.getElementById('roomTypes').focus();
+                return false;
+            }
+
+            return true;
+        }
+
+        // ===================== 6. 获取表单数据 =====================
+        function getFormData() {
+            return {
+                id: parseInt(document.getElementById('hotelId').value) || 0,
+                name: document.getElementById('name').value.trim(),
+                nameEn: document.getElementById('nameEn').value.trim(),
+                star: document.getElementById('star').value,
+                openTime: document.getElementById('openTime').value,
+                address: document.getElementById('address').value.trim(),
+                priceRange: document.getElementById('priceRange').value.trim(),
+                totalRooms: parseInt(document.getElementById('totalRooms').value) || 0,
+                roomTypes: document.getElementById('roomTypes').value.trim(),
+                scenicSpots: document.getElementById('scenicSpots').value.trim(),
+                trafficMall: document.getElementById('trafficMall').value.trim(),
+                discounts: document.getElementById('discounts').value.trim(),
+                // 房型明细 JSON（可选）
+                priceData: (function(){
+                    const txt = document.getElementById('priceListJson').value.trim();
+                    if (!txt) return { roomPriceList: [] };
+                    try { const arr = JSON.parse(txt); return { roomPriceList: Array.isArray(arr) ? arr : [] }; } catch(e) { return { roomPriceList: [] }; }
+                })()
+            };
+        }
+
+        // ===================== 7. 提交数据（模拟接口 + 真实接口适配） =====================
+        function submitHotelData(formData) {
+            // 🔹 方式1：本地模拟接口（无需后端，直接测试用）
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    if (formData.id > 0) {
+                        // 模拟修改：更新本地数据源
+                        const index = hotelData.findIndex(item => item.id === formData.id);
+                        if (index > -1) {
+                            hotelData[index] = { ...hotelData[index], ...formData };
+                        }
+                        resolve({ code: 200, msg: '酒店信息修改成功！' });
+                    } else {
+                        // 模拟新增：生成新ID，添加到本地数据源
+                        const newId = hotelData.length > 0 ? Math.max(...hotelData.map(item => item.id)) + 1 : 1;
+                        formData.id = newId;
+                        hotelData.push(formData);
+                        resolve({ code: 200, msg: '酒店信息新增成功！' });
+                    }
+                }, 500); // 模拟网络延迟
+            });
+
+            // 🔹 方式2：真实后端接口请求（替换上面的模拟代码即可）
+            // return fetch('/api/hotel/save', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json',
+            //         // 如需token认证，添加token
+            //         // 'Authorization': 'Bearer ' + localStorage.getItem('token')
+            //     },
+            //     body: JSON.stringify(formData)
+            // })
+            // .then(res => res.json())
+            // .then(data => {
+            //     if (data.code === 200) {
+            //         return data;
+            //     } else {
+            //         throw new Error(data.msg || '接口请求失败');
+            //     }
+            // });
+        }
+
+        // ===================== 8. 单图上传/预览/持久化 =====================
+        let hotelImage = null; // DataURL 或相对路径
+
+        function getDefaultImage(id) {
+            return 'pic/hotel_' + id + '.png';
+        }
+
+        function initImageSection() {
+            const id = editHotelId || 0;
+            let stored = null;
+            if (id > 0) {
+                stored = localStorage.getItem('hotelImage:' + id);
+            }
+            const src = stored || (id > 0 ? getDefaultImage(id) : '');
+            if (src) {
+                hotelImage = src;
+                renderSinglePreview(src);
+            } else {
+                renderSinglePreview('');
+            }
+        }
+
+        function handleImageUploadSingle(event) {
+            const file = (event.target.files || [])[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    const resized = resizeTo16x9(img, 1280, 720);
+                    if (img.naturalWidth < 1280 || img.naturalHeight < 720) {
+                        alert('提示：上传图片分辨率低于1280×720，已自动适配，但清晰度可能受影响。');
+                    }
+                    hotelImage = resized;
+                    renderSinglePreview(hotelImage);
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function renderSinglePreview(src) {
+            const gallery = document.getElementById('imageGallery');
+            if (!src) {
+                gallery.innerHTML = '<div class="form-tip">当前暂无配图，提交后若未上传将使用默认映射图片。</div>';
+                return;
+            }
+            gallery.innerHTML = `
+                <div class="image-item">
+                    <img src="${src}" alt="hotel-image">
+                    <button type="button" class="image-remove" onclick="clearImage()">删除</button>
+                </div>
+            `;
+        }
+
+        function clearImage() {
+            hotelImage = null;
+            renderSinglePreview('');
+        }
+
+        function getCurrentImage() {
+            return hotelImage || null;
+        }
+
+        // 将任意图片按16:9居中裁剪并缩放到指定尺寸
+        function resizeTo16x9(img, targetW, targetH) {
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext('2d');
+            const srcW = img.naturalWidth;
+            const srcH = img.naturalHeight;
+            const targetRatio = targetW / targetH; // 16/9
+            const srcRatio = srcW / srcH;
+            let drawW, drawH;
+            if (srcRatio > targetRatio) {
+                // 源更宽：以高度为准，横向裁剪
+                drawH = targetH;
+                const scale = drawH / srcH;
+                drawW = srcW * scale;
+            } else {
+                // 源更高：以宽度为准，纵向裁剪
+                drawW = targetW;
+                const scale = drawW / srcW;
+                drawH = srcH * scale;
+            }
+            const offsetX = (targetW - drawW) / 2;
+            const offsetY = (targetH - drawH) / 2;
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.drawImage(img, offsetX, offsetY, drawW, drawH);
+            return canvas.toDataURL('image/jpeg', 0.9);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>易宿 - 酒店详情管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            color: #333;
+        }
+        /* 顶部导航栏 - 复用统一风格 */
+        .top-nav {
+            background: linear-gradient(90deg, #6a85b6 0%, #8b9abc 100%);
+            color: #fff;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .nav-logo .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logout-btn {
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        /* 主容器 - 左右布局，左侧导航固定 */
+        .container {
+            max-width: 1400px;
+            margin: 32px auto;
+            padding: 0 32px;
+            display: flex;
+            gap: 24px;
+        }
+        /* 左侧导航栏 - 改为3个选项，样式强化 */
+        .tab-nav {
+            width: 240px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            overflow: hidden;
+            position: sticky;
+            top: 100px;
+            align-self: flex-start;
+            height: fit-content;
+        }
+        .tab-item {
+            padding: 18px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .tab-item.active {
+            background: rgba(64, 158, 255, 0.1);
+            color: #409eff;
+            border-left-color: #409eff;
+            font-weight: 600;
+        }
+        .tab-item:hover {
+            background: #f8f9fa;
+        }
+        /* 右侧内容区 - 样式不变，适配多板块 */
+        .tab-content {
+            flex: 1;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 28px;
+            min-height: 600px;
+        }
+        .content-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .content-title .hotel-name {
+            font-size: 20px;
+            font-weight: 600;
+        }
+        /* 1. 酒店基本情况样式 - 完全保留原有设计 */
+        .base-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .info-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .info-value {
+            font-size: 16px;
+            color: #333;
+            line-height: 1.5;
+        }
+        .info-value.en {
+            color: #999;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        .tag-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+        .tag {
+            padding: 4px 12px;
+            background: #f5f7fa;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #666;
+        }
+        .tag.hot {
+            background: rgba(250, 128, 114, 0.1);
+            color: #fa8072;
+        }
+        .discount-tag {
+            background: rgba(245, 108, 108, 0.1);
+            color: #f56c6c;
+            border: 1px solid #f56c6c;
+        }
+        /* 顶部主图 + 标题行 */
+        .hero-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        /* 酒店主图（单张，按比例缩放） */
+        .image-hero {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            background: #f8f9fa;
+            flex: 0 0 48%;
+            aspect-ratio: 16 / 9; /* 1280×720 推荐比例，等比例缩放 */
+        }
+        .image-hero img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        /* 酒店标题块（右侧） */
+        .hotel-title-block {
+            flex: 1;
+            padding: 8px 12px;
+        }
+        .hotel-title-cn {
+            font-size: 22px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .hotel-title-en {
+            font-size: 14px;
+            color: #999;
+        }
+        .hotel-subline {
+            font-size: 14px;
+            color: #666;
+            margin-top: 8px;
+            line-height: 1.6;
+        }
+        .meta-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .meta-chip {
+            padding: 4px 10px;
+            background: #f5f7fa;
+            border-radius: 16px;
+            font-size: 12px;
+            color: #666;
+        }
+        /* 图片下方：热门景点 + 交通两行 */
+        .below-tags-row {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin: 10px 0 16px;
+        }
+        .below-line {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .below-label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 700; /* 非标签文本加粗 */
+        }
+        /* 2. 房价概览样式 - 参考图片设计，分概览卡片+房价表格 */
+        .price-overview {
+            width: 100%;
+        }
+        /* 房价概览统计卡片 - 与原有统计风格统一 */
+        .price-stats {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+        .price-stat-card {
+            flex: 1;
+            min-width: 180px;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .price-stat-num {
+            font-size: 24px;
+            font-weight: 700;
+            color: #f56c6c;
+            margin: 8px 0;
+        }
+        .price-stat-label {
+            font-size: 14px;
+            color: #666;
+        }
+        .price-stat-num.avg {
+            color: #409eff;
+        }
+        .price-stat-num.rate {
+            color: #67c23a;
+        }
+        /* 房型图片缩略图 */
+        .room-thumb {
+            width: 100px;
+            aspect-ratio: 16 / 9;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f8fafc;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+        }
+        .room-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .thumb-empty { font-size: 12px; color: #999; }
+        /* 弹窗图片预览与选择 */
+        .image-preview-box {
+            grid-column: 1 / -1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .image-preview {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            background: #f8fafc;
+            overflow: hidden;
+            display: grid;
+            place-items: center;
+        }
+        .image-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .file-tip { font-size: 12px; color: #999; }
+        /* 房型操作按钮与弹窗 */
+        .title-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-mini {
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-primary-mini { background: #409eff; color: #fff; }
+        .btn-default-mini { background: #f5f7fa; color: #666; border: 1px solid #dcdcdc; }
+        .btn-primary-mini:hover { background: #337ecc; }
+        .btn-default-mini:hover { background: #eef2f7; }
+        .action-mini { padding: 4px 8px; border-radius: 4px; font-size: 12px; border: none; cursor: pointer; }
+        .action-mini.edit { background: #67c23a; color: #fff; }
+        .action-mini.edit:hover { background: #529b2e; }
+        .action-mini.delete { background: #f56c6c; color: #fff; }
+        .action-mini.delete:hover { background: #dd4f4f; }
+        .room-ops { display: flex; gap: 8px; }
+        /* 弹窗 */
+        .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: none; align-items: center; justify-content: center; z-index: 999; }
+        .modal-card { width: 520px; max-width: 92%; max-height: 70vh; background: #fff; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; }
+        .modal-header { padding: 10px 14px; font-weight: 600; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center; }
+        .modal-body { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; overflow-y: auto; }
+        .modal-footer { padding: 10px 14px; border-top: 1px solid #f0f0f0; display: flex; justify-content: flex-end; gap: 10px; }
+        .modal-item { display: flex; flex-direction: column; gap: 6px; }
+        .modal-label { font-size: 13px; color: #666; }
+        .modal-input, .modal-select { padding: 8px 10px; border: 1px solid #dcdcdc; border-radius: 4px; font-size: 14px; }
+        /* 当日房价表格 - 适配价格展示，增加原价/折后价/房态列 */
+        .price-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        .price-table th,
+        .price-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .price-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #666;
+        }
+        .price-table tr:hover {
+            background: #fafafa;
+        }
+        .price-original {
+            color: #999;
+            text-decoration: line-through;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .price-current {
+            color: #f56c6c;
+            font-weight: 600;
+        }
+        .room-status {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .room-status.available {
+            background: rgba(103, 194, 58, 0.1);
+            color: #67c23a;
+        }
+        .room-status.low {
+            background: rgba(250, 173, 20, 0.1);
+            color: #fad529;
+        }
+        .room-status.soldout {
+            background: rgba(245, 108, 108, 0.1);
+            color: #f56c6c;
+        }
+        /* 3. 当日订单情况样式 - 复用原有订单表格，优化列名和展示 */
+        .order-list {
+            width: 100%;
+        }
+        /* 概览统计条 */
+        .order-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        .overview-item {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 12px 16px;
+        }
+        .overview-label {
+            font-size: 13px;
+            color: #666;
+        }
+        .overview-num {
+            font-size: 24px;
+            font-weight: 700;
+            color: #409eff;
+            margin-top: 6px;
+        }
+        .order-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        .order-table th,
+        .order-table td {
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 14px;
+        }
+        .order-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #666;
+        }
+        .order-table tr:hover {
+            background: #fafafa;
+        }
+        .order-status {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .order-status.checked {
+            background: rgba(103, 194, 58, 0.1);
+            color: #67c23a;
+        }
+        .order-status.pending {
+            background: rgba(250, 173, 20, 0.1);
+            color: #fad529;
+        }
+        .order-status.unchecked {
+            background: rgba(245, 108, 108, 0.1);
+            color: #f56c6c;
+        }
+        .order-amount {
+            color: #f56c6c;
+            font-weight: 600;
+        }
+        /* 订单状态下拉框样式 */
+        .order-status-select {
+            padding: 4px 6px;
+            border: 1px solid #dcdcdc;
+            border-radius: 3px;
+            font-size: 13px;
+            color: #333;
+            background: #fff;
+        }
+        .order-status-select.unchecked {
+            background: rgba(64, 158, 255, 0.1);
+            color: #409eff;
+            border-color: rgba(64, 158, 255, 0.25);
+        }
+        .order-status-select.pending {
+            background: rgba(250, 173, 20, 0.1);
+            color: #fad529;
+            border-color: rgba(250, 173, 20, 0.25);
+        }
+        .order-status-select.checked {
+            background: rgba(103, 194, 58, 0.1);
+            color: #67c23a;
+            border-color: rgba(103, 194, 58, 0.25);
+        }
+        .order-status-select.canceled {
+            background: rgba(245, 108, 108, 0.1);
+            color: #f56c6c;
+            border-color: rgba(245, 108, 108, 0.25);
+        }
+        /* 返回按钮 */
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #409eff;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 16px;
+            background: transparent;
+            border: none;
+        }
+        /* 空状态提示 - 统一样式 */
+        .empty-tip {
+            text-align: center;
+            padding: 80px 0;
+            color: #999;
+            font-size: 16px;
+        }
+        .empty-tip i {
+            font-size: 48px;
+            margin-bottom: 16px;
+            display: block;
+        }
+        /* 响应式适配 - 小屏幕下左右布局变上下 */
+        @media (max-width: 992px) {
+            .container {
+                flex-direction: column;
+            }
+            .tab-nav {
+                width: 100%;
+                position: static;
+            }
+            .hero-row { flex-direction: column; }
+            .image-hero { flex: 0 0 auto; width: 100%; }
+            .base-info {
+                grid-template-columns: 1fr;
+            }
+            .price-stats, .stats-overview {
+                flex-direction: column;
+            }
+            .price-stat-card, .overview-card {
+                min-width: 100%;
+            }
+            /* 表格横向滚动 */
+            .price-table, .order-table {
+                display: block;
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 - 完全复用，风格统一 -->
+    <div class="top-nav">
+        <div class="nav-logo">
+            <div class="logo-icon">🏨</div>
+            <span>易宿酒店商家管理后台</span>
+        </div>
+        <div class="user-info">
+            <span id="userWelcome">欢迎</span>
+            <button class="logout-btn" id="logoutBtn">退出登录</button>
+        </div>
+    </div>
+
+    <!-- 主内容容器 - 左右布局 -->
+    <div class="container">
+        <!-- 左侧导航栏 - 改为3个选项：基本情况、房价概览、当日订单 -->
+        <div class="tab-nav">
+            <div class="tab-item active" data-tab="baseInfo">🏨 酒店基本情况</div>
+            <div class="tab-item" data-tab="priceOverview">🛏️ 房型概览</div>
+            <div class="tab-item" data-tab="orderStatus">📋 当日订单情况</div>
+        </div>
+
+        <!-- 右侧内容区 - 包含3个板块，默认显示基本情况 -->
+        <div class="tab-content">
+            <!-- 返回按钮 -->
+            <button class="back-btn" onclick="window.location.href='dashboard.html'">← 返回酒店列表</button>
+            <button class="btn-default-mini" id="deleteHotelBtn" style="background:#f56c6c;color:#fff;border:none;margin-left:8px;">删除酒店</button>
+            
+            <!-- 1. 酒店基本情况（主图+标题在上，详情信息在下） -->
+            <div id="baseInfo" class="tab-panel active">
+                <h2 class="content-title">酒店基本情况</h2>
+                <!-- 顶部：主图 + 酒店标题块 -->
+                <div class="hero-row">
+                    <div class="image-hero" id="detailImageHero"></div>
+                    <div class="hotel-title-block" id="hotelTitleBlock"></div>
+                </div>
+                <!-- 图片下方一行：热门景点 + 交通及商场 -->
+                <div class="below-tags-row" id="belowTagsRow"></div>
+                <div class="base-info" id="baseInfoContainer">
+                    <!-- JS动态渲染，初始为空 -->
+                </div>
+            </div>
+
+            <!-- 2. 房价概览（参考图片设计，分概览统计+当日房价表格） -->
+            <div id="priceOverview" class="tab-panel" style="display: none;">
+                <h2 class="content-title">房型概览
+                    <span class="title-actions">
+                        <button class="btn-mini btn-primary-mini" id="btnAddRoom">新增房型</button>
+                    </span>
+                </h2>
+                <div class="price-overview" id="priceOverviewContainer">
+                    <!-- 房价概览统计卡片 -->
+                    <div class="price-stats" id="priceStatsContainer">
+                        <!-- JS动态渲染 -->
+                    </div>
+                    <!-- 当日房价表格 -->
+                    <table class="price-table">
+                        <thead>
+                            <tr>
+                                <th>房型图片</th>
+                                <th>房型名称</th>
+                                <th>剩余房量</th>
+                                <th>房态</th>
+                                <th>当日价格</th>
+                                <th>折扣</th>
+                                <th>备注</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="priceTableBody">
+                            <!-- JS动态渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- 3. 当日订单情况（复用原有订单数据，优化表格列名和展示） -->
+            <div id="orderStatus" class="tab-panel" style="display: none;">
+                <h2 class="content-title">当日订单情况（<span id="orderDate"></span>）</h2>
+                <div class="order-list" id="orderListContainer">
+                    <!-- 概览统计 -->
+                    <div class="order-overview" id="orderOverviewContainer"></div>
+                    <table class="order-table">
+                        <thead>
+                            <tr>
+                                <th>订单编号</th>
+                                <th>房间号</th>
+                                <th>房型</th>
+                                <th>入住客人</th>
+                                <th>预订电话</th>
+                                <th>订单金额</th>
+                                <th>订单状态</th>
+                                <th>预计离店</th>
+                                <th>支付方式</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orderTableBody">
+                            <!-- JS动态渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================== 第一步：扩展酒店数据源（新增房价+订单相关字段，id与URL对应） =====================
+        const hotelData = [
+            {
+                id: 1,
+                name: "海景度假酒店",
+                nameEn: "Seaview Resort Hotel",
+                totalRooms: 280,
+                address: "上海市浦东新区滨海大道188号（近东方明珠）",
+                star: "⭐⭐⭐⭐⭐ 五星级",
+                roomTypes: ["海景大床房", "海景双床房", "豪华套房", "亲子主题房", "海景别墅（热门）"],
+                priceRange: "880元 - 6880元/晚",
+                openTime: "2018年06月18日",
+                scenicSpots: ["东方明珠（1.2km）", "外滩（2.5km）", "上海海洋公园（3.0km）", "陆家嘴中心（0.8km）"],
+                trafficMall: ["地铁2号线滨海站（300m）", "滨海万达广场（500m）", "浦东国际机场（25km）", "上海火车站（18km）"],
+                discounts: [
+                    "春节特惠：全场房型8折（截止2026.02.24）",
+                    "机票+酒店套餐：立减300元/人",
+                    "连住3晚及以上：赠送双人早餐+温泉体验券",
+                    "新用户首次预订：立减100元"
+                ],
+                // 新增：房价概览数据（参考图片设计）
+                priceData: {
+                    maxPrice: 6880,    // 最高房价
+                    minPrice: 704,     // 最低折后价
+                    avgPrice: 2880,    // 平均房价
+                    discountRate: "8折",// 整体折扣
+                    roomPriceList: [    // 当日房价明细
+                        {type: "海景大床房", original: 1100, current: 880, discount: "8折", remain: 18, status: "available", remark: "含双人早餐"},
+                        {type: "海景双床房", original: 1300, current: 1040, discount: "8折", remain: 12, status: "available", remark: "无早"},
+                        {type: "豪华套房", original: 3800, current: 3040, discount: "8折", remain: 5, status: "low", remark: "含行政酒廊"},
+                        {type: "亲子主题房", original: 1600, current: 1280, discount: "8折", remain: 9, status: "available", remark: "含儿童早餐"},
+                        {type: "海景别墅", original: 6880, current: 5504, discount: "8折", remain: 2, status: "low", remark: "独栋温泉，含4人早餐"}
+                    ]
+                },
+                // 当日订单数据（复用原有入住数据，新增订单编号/金额/支付方式）
+                orderList: [
+                    {orderNo: "YS20260204001", room: "1001", type: "海景大床房", guest: "张先生", phone: "138****6688", amount: "880元/晚", status: "checked", leave: "2026-02-06", payType: "在线支付"},
+                    {orderNo: "YS20260204002", room: "1008", type: "豪华套房", guest: "李女士", phone: "139****9977", amount: "3040元/晚", status: "checked", leave: "2026-02-05", payType: "到店支付"},
+                    {orderNo: "YS20260204003", room: "2015", type: "亲子主题房", guest: "王先生一家", phone: "136****8899", amount: "1280元/晚", status: "pending", leave: "2026-02-08", payType: "在线支付"},
+                    {orderNo: "YS20260204004", room: "3002", type: "海景双床房", guest: "刘先生/陈先生", phone: "137****7766", amount: "1040元/晚", status: "checked", leave: "2026-02-04", payType: "套餐抵扣"},
+                    {orderNo: "YS20260204005", room: "3010", type: "海景别墅", guest: "赵女士", phone: "135****5588", amount: "5504元/晚", status: "pending", leave: "2026-02-10", payType: "在线支付"},
+                    {orderNo: "YS20260204006", room: "4006", type: "海景大床房", guest: "孙先生", phone: "134****6699", amount: "880元/晚", status: "unchecked", leave: "2026-02-07", payType: "未支付"}
+                ]
+            },
+            {
+                id: 2,
+                name: "城市商务酒店",
+                nameEn: "City Business Hotel",
+                totalRooms: 320,
+                address: "北京市朝阳区建国门外大街66号（近国贸中心）",
+                star: "⭐⭐⭐⭐ 四星级",
+                roomTypes: ["商务大床房", "商务双床房", "行政套房", "精品单间", "会议室配套房（热门）"],
+                priceRange: "580元 - 2880元/晚",
+                openTime: "2015年10月01日",
+                scenicSpots: ["国贸三期（0.3km）", "天安门广场（3.8km）", "故宫（4.2km）", "三里屯太古里（1.5km）"],
+                trafficMall: ["地铁1号线国贸站（200m）", "SKP购物中心（0.5km）", "北京首都机场（28km）", "北京南站（12km）"],
+                discounts: [
+                    "商务出行特惠：连住2晚立减150元",
+                    "企业协议价：享7.5折+免费会议室1小时",
+                    "机票+酒店套餐：立减200元/人",
+                    "新用户首次预订：立减80元"
+                ],
+                // 新增：房价概览数据
+                priceData: {
+                    maxPrice: 2880,
+                    minPrice: 435,
+                    avgPrice: 1280,
+                    discountRate: "7.5折",
+                    roomPriceList: [
+                        {type: "商务大床房", original: 580, current: 435, discount: "7.5折", remain: 25, status: "available", remark: "含单人早餐"},
+                        {type: "商务双床房", original: 680, current: 510, discount: "7.5折", remain: 18, status: "available", remark: "无早"},
+                        {type: "行政套房", original: 1880, current: 1410, discount: "7.5折", remain: 8, status: "low", remark: "含行政酒廊+会议室1小时"},
+                        {type: "精品单间", original: 480, current: 360, discount: "7.5折", remain: 30, status: "available", remark: "迷你房，无窗"},
+                        {type: "会议室配套房", original: 2880, current: 2160, discount: "7.5折", remain: 3, status: "low", remark: "含10人会议室4小时+双人早餐"}
+                    ]
+                },
+                // 当日订单数据
+                orderList: [
+                    {orderNo: "YS20260204007", room: "801", type: "行政套房", guest: "周总", phone: "139****8888", amount: "1410元/晚", status: "checked", leave: "2026-02-05", payType: "企业转账"},
+                    {orderNo: "YS20260204008", room: "905", type: "商务大床房", guest: "吴先生", phone: "138****7777", amount: "435元/晚", status: "checked", leave: "2026-02-04", payType: "到店支付"},
+                    {orderNo: "YS20260204009", room: "1008", type: "商务双床房", guest: "郑先生/马先生", phone: "137****6666", amount: "510元/晚", status: "checked", leave: "2026-02-06", payType: "套餐抵扣"},
+                    {orderNo: "YS20260204010", room: "1102", type: "精品单间", guest: "冯女士", phone: "136****5555", amount: "360元/晚", status: "pending", leave: "2026-02-07", payType: "在线支付"},
+                    {orderNo: "YS20260204011", room: "1206", type: "会议室配套房", guest: "陈经理", phone: "135****4444", amount: "2160元/晚", status: "unchecked", leave: "2026-02-08", payType: "未支付"},
+                    {orderNo: "YS20260204012", room: "1503", type: "商务大床房", guest: "褚先生", phone: "134****3333", amount: "435元/晚", status: "pending", leave: "2026-02-09", payType: "企业转账"}
+                ]
+            },
+            {
+                id: 3,
+                name: "山水温泉酒店",
+                nameEn: "Shanshui Hot Spring Hotel",
+                totalRooms: 200,
+                address: "杭州市西湖区龙井路128号（近西湖龙井村）",
+                star: "⭐⭐⭐⭐ 四星级",
+                roomTypes: ["温泉大床房", "温泉双床房", "山景套房", "亲子温泉房", "独栋温泉别墅（热门）"],
+                priceRange: "680元 - 3880元/晚",
+                openTime: "2017年08月15日",
+                scenicSpots: ["西湖（1.8km）", "龙井村（0.5km）", "灵隐寺（3.2km）", "河坊街（2.5km）"],
+                trafficMall: ["地铁10号线龙井站（800m）", "西湖银泰城（2.0km）", "杭州萧山机场（35km）", "杭州东站（15km）"],
+                discounts: [
+                    "春节特惠：全场房型8.5折（截止2026.02.24）",
+                    "温泉+酒店套餐：立减260元/2人",
+                    "连住2晚及以上：赠送双人温泉票+龙井茶叶伴手礼",
+                    "新用户首次预订：立减120元"
+                ],
+                // 新增：房价概览数据
+                priceData: {
+                    maxPrice: 3880,
+                    minPrice: 578,
+                    avgPrice: 1680,
+                    discountRate: "8.5折",
+                    roomPriceList: [
+                        {type: "温泉大床房", original: 680, current: 578, discount: "8.5折", remain: 15, status: "available", remark: "含双人温泉票"},
+                        {type: "温泉双床房", original: 880, current: 748, discount: "8.5折", remain: 10, status: "available", remark: "含4人温泉票"},
+                        {type: "山景套房", original: 1980, current: 1683, discount: "8.5折", remain: 6, status: "low", remark: "山景+私汤，含双人早餐"},
+                        {type: "亲子温泉房", original: 1280, current: 1088, discount: "8.5折", remain: 8, status: "available", remark: "含2大1小温泉票+儿童早餐"},
+                        {type: "独栋温泉别墅", original: 3880, current: 3298, discount: "8.5折", remain: 1, status: "low", remark: "独栋私汤+庭院，含4人早餐+龙井伴手礼"}
+                    ]
+                },
+                // 当日订单数据
+                orderList: [
+                    {orderNo: "YS20260204013", room: "501", type: "独栋温泉别墅", guest: "沈女士一家", phone: "138****9999", amount: "3298元/晚", status: "checked", leave: "2026-02-07", payType: "在线支付"},
+                    {orderNo: "YS20260204014", room: "608", type: "温泉大床房", guest: "韩先生/杨女士", phone: "139****8899", amount: "578元/晚", status: "checked", leave: "2026-02-05", payType: "在线支付"},
+                    {orderNo: "YS20260204015", room: "705", type: "亲子温泉房", guest: "朱先生一家", phone: "137****7788", amount: "1088元/晚", status: "checked", leave: "2026-02-06", payType: "在线支付"},
+                    {orderNo: "YS20260204016", room: "802", type: "山景套房", guest: "秦女士", phone: "136****6677", amount: "1683元/晚", status: "pending", leave: "2026-02-09", payType: "套餐抵扣"},
+                    {orderNo: "YS20260204017", room: "909", type: "温泉双床房", guest: "尤先生/许先生", phone: "135****5566", amount: "748元/晚", status: "unchecked", leave: "2026-02-08", payType: "未支付"},
+                    {orderNo: "YS20260204018", room: "1003", type: "温泉大床房", guest: "何女士", phone: "134****4455", amount: "578元/晚", status: "pending", leave: "2026-02-10", payType: "在线支付"}
+                ]
+            }
+        ];
+
+        // ===================== 第二步：解析URL中的id参数（原有逻辑，无修改） =====================
+        function getUrlParam(key) {
+            const params = new URLSearchParams(window.location.search);
+            return parseInt(params.get(key)) || 0;
+        }
+        let currentHotelId = getUrlParam('id');
+        // 若 URL 未提供 id，则尝试使用本地已审核酒店的第一个记录，或回退到静态数据的第一个酒店，避免页面空白
+        if (!currentHotelId) {
+            try {
+                const local = JSON.parse(localStorage.getItem('hotels') || '[]');
+                if (local && local.length) {
+                    currentHotelId = local[0].id;
+                } else if (hotelData && hotelData.length) {
+                    currentHotelId = hotelData[0].id;
+                }
+            } catch (e) {
+                if (hotelData && hotelData.length) currentHotelId = hotelData[0].id;
+            }
+        }
+
+        // 归一化酒店对象，确保页面渲染时字段存在且类型正确
+        function normalizeHotel(raw) {
+            if (!raw) return null;
+            const h = JSON.parse(JSON.stringify(raw)); // shallow clone
+            // roomTypes: 支持数组或逗号分隔字符串
+            if (!h.roomTypes) h.roomTypes = [];
+            else if (typeof h.roomTypes === 'string') {
+                h.roomTypes = h.roomTypes.split(',').map(s => s.trim()).filter(Boolean);
+            }
+            // scenicSpots / trafficMall / discounts: 支持数组或逗号分隔字符串
+            ['scenicSpots','trafficMall','discounts'].forEach(key => {
+                if (!h[key]) h[key] = [];
+                else if (typeof h[key] === 'string') {
+                    h[key] = h[key].split(',').map(s => s.trim()).filter(Boolean);
+                }
+            });
+            // priceData.roomPriceList
+            if (!h.priceData) h.priceData = { roomPriceList: [] };
+            else if (!Array.isArray(h.priceData.roomPriceList)) h.priceData.roomPriceList = [];
+            // orderList
+            if (!h.orderList) h.orderList = [];
+            return h;
+        }
+
+        // 查找酒店：优先从已通过的 localStorage 'hotels'，其次查找 'merchantHotels'（未审核也能查看），最后回退到静态 hotelData
+        function findHotelById(id) {
+            if (!id) return null;
+            try {
+                const local = JSON.parse(localStorage.getItem('hotels') || '[]');
+                const found = local.find(h => h.id === id);
+                if (found) return normalizeHotel(found);
+            } catch (e) {}
+            try {
+                const merchants = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
+                const m = merchants.find(h => h.id === id);
+                if (m) return normalizeHotel(m);
+            } catch (e) {}
+            const stat = hotelData.find(hotel => hotel.id === id) || null;
+            return normalizeHotel(stat);
+        }
+        const currentHotel = findHotelById(currentHotelId);
+
+        // ===================== 第三步：动态渲染3个板块内容 =====================
+        // 1. 渲染酒店基本情况（完全保留原有逻辑，无修改）
+        function renderBaseInfo(hotel) {
+            const container = document.getElementById('baseInfoContainer');
+            const titleBlock = document.getElementById('hotelTitleBlock');
+            const belowTagsRow = document.getElementById('belowTagsRow');
+            // 渲染主图
+            renderDetailImage(currentHotelId);
+            // 渲染右侧标题块（中英文名）
+            titleBlock.innerHTML = `
+                <div class="hotel-title-cn">${hotel.name}</div>
+                <div class="hotel-title-en">${hotel.nameEn || ''}</div>
+                <div class="hotel-subline"><strong>地址：</strong>${hotel.address}</div>
+                <div class="hotel-subline"><strong>星级：</strong>${hotel.star}</div>
+                <div class="hotel-subline"><strong>基础价格区间：</strong>${hotel.priceRange}</div>
+                <div class="hotel-subline"><strong>开业时间：</strong>${hotel.openTime}</div>
+                <div class="hotel-subline"><strong>房型：</strong></div>
+                <div class="tag-group">${hotel.roomTypes.map(item => {
+                    if (item.includes('（热门）')) {
+                        const name = item.replace('（热门）', '');
+                        return `<span class="tag hot">${name}</span>`;
+                    }
+                    return `<span class="tag">${item}</span>`;
+                }).join('')}</div>
+            `;
+            const scenicTags = hotel.scenicSpots.map(item => `<span class="tag">${item}</span>`).join('');
+            const trafficTags = hotel.trafficMall.map(item => `<span class="tag">${item}</span>`).join('');
+            const discountTags = hotel.discounts.map(item => `<span class="tag discount-tag">${item}</span>`).join('');
+            // 图片下方一行：热门景点 + 交通及商场
+            belowTagsRow.innerHTML = `
+                <div class="below-line">
+                    <span class="below-label">附近热门景点</span>
+                    <div class="tag-group">${scenicTags}</div>
+                </div>
+                <div class="below-line">
+                    <span class="below-label">交通及商场</span>
+                    <div class="tag-group">${trafficTags}</div>
+                </div>
+            `;
+            container.innerHTML = `
+                <div class="info-item" style="grid-column: 1 / -1;">
+                    <span class="info-label"><strong>当前优惠活动</strong></span>
+                    <div class="info-value tag-group">${discountTags}</div>
+                </div>
+            `;
+        }
+
+        // 渲染详情页主图：优先 localStorage 覆盖，其次使用酒店对象中的 image 字段，最后按 id 映射默认图
+        function renderDetailImage(hotelId) {
+            const hero = document.getElementById('detailImageHero');
+            let src = null;
+            try { src = localStorage.getItem('hotelImage:' + hotelId); } catch (e) { src = null; }
+            if (!src) {
+                if (currentHotel && currentHotel.image) src = currentHotel.image;
+                else src = 'pic/hotel_' + hotelId + '.png';
+            }
+            hero.innerHTML = `<img src="${src}" alt="hotel-image">`;
+        }
+
+        // 删除酒店（商户端）：移除 merchantHotels / hotels，并清理关联 localStorage 键
+        function handleDeleteHotel(id) {
+            if (!id) return;
+            if (!confirm('确认删除该酒店？该操作会移除本地存储的酒店数据与关联资源。')) return;
+            try {
+                let merchants = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
+                merchants = merchants.filter(h => h.id !== id);
+                localStorage.setItem('merchantHotels', JSON.stringify(merchants));
+            } catch (e) {}
+            try {
+                let approved = JSON.parse(localStorage.getItem('hotels') || '[]');
+                approved = approved.filter(h => h.id !== id);
+                localStorage.setItem('hotels', JSON.stringify(approved));
+            } catch (e) {}
+            try { localStorage.removeItem('hotelImage:' + id); } catch (e) {}
+            try { localStorage.removeItem('hotelRooms:' + id); } catch (e) {}
+            try { localStorage.removeItem('hotelOrders:' + id); } catch (e) {}
+            try { localStorage.removeItem('priceListDraft:' + id); } catch (e) {}
+            window.location.href = 'dashboard.html';
+        }
+
+        // 顶部用户信息显示与退出（sessionStorage，支持不同标签页独立登录）
+        (function() {
+            const welcome = document.getElementById('userWelcome');
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (welcome) {
+                const name = sessionStorage.getItem('username') || '';
+                const role = sessionStorage.getItem('role') || 'user';
+                welcome.textContent = name ? `欢迎，${name}（${role}）` : '欢迎，商户';
+            }
+            if (logoutBtn) logoutBtn.addEventListener('click', () => {
+                try { sessionStorage.removeItem('username'); sessionStorage.removeItem('role'); } catch (e) {}
+                window.location.href = 'loginPage.html';
+            });
+        })();
+
+        // 2. 渲染房价概览（参考图片设计，分概览卡片+房价表格）
+        function renderPriceOverview(hotel) {
+            const statsContainer = document.getElementById('priceStatsContainer');
+            const tableBody = document.getElementById('priceTableBody');
+            const priceData = hotel.priceData;
+
+            // 本地房型覆盖/新增
+            let storedRooms = [];
+            try {
+                storedRooms = JSON.parse(localStorage.getItem('hotelRooms:' + currentHotelId) || '[]');
+            } catch (e) { storedRooms = []; }
+            const baseList = priceData.roomPriceList || [];
+            const list = storedRooms.length ? storedRooms : baseList;
+            const totalTypes = list.length;
+            const availableCount = list.filter(i => i.status === 'available').length;
+            const lowCount = list.filter(i => i.status === 'low').length;
+            const soldoutCount = list.filter(i => i.status === 'soldout').length;
+
+            // 渲染房型概览统计卡片
+            statsContainer.innerHTML = `
+                <div class="price-stat-card">
+                    <div class="price-stat-label">房型总数</div>
+                    <div class="price-stat-num">${totalTypes}</div>
+                </div>
+                <div class="price-stat-card">
+                    <div class="price-stat-label">可预订房型</div>
+                    <div class="price-stat-num rate">${availableCount}</div>
+                </div>
+                <div class="price-stat-card">
+                    <div class="price-stat-label">紧张房型</div>
+                    <div class="price-stat-num avg">${lowCount}</div>
+                </div>
+                <div class="price-stat-card">
+                    <div class="price-stat-label">已售罄房型</div>
+                    <div class="price-stat-num">${soldoutCount}</div>
+                </div>
+            `;
+
+            // 房态文本映射
+            const statusText = {
+                available: "可预订",
+                low: "房量紧张",
+                soldout: "已售罄"
+            };
+            // 渲染当日房价表格
+            const tableRows = list.map((item, idx) => `
+                <tr>
+                    <td>
+                        <div class="room-thumb">
+                            ${item.image ? `<img src="${item.image}" alt="房型图片"/>` : `<span class="thumb-empty">无图</span>`}
+                        </div>
+                    </td>
+                    <td>${item.type}</td>
+                    <td>${item.remain}间</td>
+                    <td><span class="room-status ${item.status}">${statusText[item.status]}</span></td>
+                    <td><span class="price-current">${item.current}元</span> <span class="price-original">${item.original}元</span></td>
+                    <td>${item.discount}</td>
+                    <td>${item.remark || ''}</td>
+                    <td>
+                        <div class="room-ops">
+                            <button class="action-mini delete" data-room-index="${idx}" data-op="delete">删除房型</button>
+                            <button class="action-mini edit" data-room-index="${idx}" data-op="edit">修改信息</button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            tableBody.innerHTML = tableRows;
+
+            // 绑定按钮事件（委托）
+            const priceContainer = document.getElementById('priceOverviewContainer');
+            priceContainer.addEventListener('click', function(ev) {
+                const btn = ev.target;
+                if (btn && btn.dataset && btn.dataset.op) {
+                    const idx = parseInt(btn.dataset.roomIndex);
+                    const op = btn.dataset.op;
+                    if (op === 'edit') openRoomModal(list[idx], false, idx);
+                    if (op === 'delete') {
+                        if (!confirm('确认删除该房型？删除后不可恢复。')) return;
+                        let stored = [];
+                        try { stored = JSON.parse(localStorage.getItem('hotelRooms:' + currentHotelId) || '[]'); } catch (e) { stored = []; }
+                        if (!stored.length) {
+                            const base = (hotelData.find(h => h.id===currentHotelId)?.priceData?.roomPriceList) || [];
+                            stored = base.slice();
+                        }
+                        stored.splice(idx, 1);
+                        localStorage.setItem('hotelRooms:' + currentHotelId, JSON.stringify(stored));
+                        const currentHotel = hotelData.find(h => h.id === currentHotelId);
+                        if (currentHotel) renderPriceOverview(currentHotel);
+                    }
+                }
+            });
+            // 新增房型按钮
+            const addBtn = document.getElementById('btnAddRoom');
+            addBtn.onclick = () => openRoomModal({type:'',original:'',current:'',discount:'',remain:'',status:'available',remark:''}, false, -1);
+        }
+
+        // 房型编辑/查看弹窗
+        function openRoomModal(room, readonly=false, index=-1) {
+            let mask = document.getElementById('roomModalMask');
+            if (!mask) {
+                mask = document.createElement('div');
+                mask.id = 'roomModalMask';
+                mask.className = 'modal-mask';
+                mask.innerHTML = `
+                    <div class="modal-card">
+                        <div class="modal-header">
+                            <span id="roomModalTitle">房型信息</span>
+                            <button class="btn-default-mini" id="roomModalClose">关闭</button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="image-preview-box">
+                                <div class="image-preview" id="roomImagePreview"><span class="thumb-empty">暂无图片</span></div>
+                                <div class="modal-item" style="grid-column: 1 / -1;">
+                                    <label class="modal-label">房型图片（16:9，自动压缩到1280×720）</label>
+                                    <input class="modal-input" id="roomImageInput" type="file" accept="image/*" />
+                                    <span class="file-tip">选择后自动裁剪与压缩，支持预览</span>
+                                </div>
+                            </div>
+                            <div class="modal-item" style="grid-column: 1 / -1;">
+                                <label class="modal-label">房型名称</label>
+                                <input class="modal-input" id="roomTypeInput"/>
+                            </div>
+                            <div class="modal-item">
+                                <label class="modal-label">原价</label>
+                                <input class="modal-input" id="roomOriginalInput" type="number" min="0"/>
+                            </div>
+                            <div class="modal-item">
+                                <label class="modal-label">当日价格</label>
+                                <input class="modal-input" id="roomCurrentInput" type="number" min="0"/>
+                            </div>
+                            <div class="modal-item">
+                                <label class="modal-label">折扣</label>
+                                <input class="modal-input" id="roomDiscountInput" placeholder="如：8折"/>
+                            </div>
+                            <div class="modal-item">
+                                <label class="modal-label">剩余房量</label>
+                                <input class="modal-input" id="roomRemainInput" type="number" min="0"/>
+                            </div>
+                            <div class="modal-item">
+                                <label class="modal-label">房态</label>
+                                <select class="modal-select" id="roomStatusSelect">
+                                    <option value="available">可预订</option>
+                                    <option value="low">房量紧张</option>
+                                    <option value="soldout">已售罄</option>
+                                </select>
+                            </div>
+                            <div class="modal-item" style="grid-column: 1 / -1;">
+                                <label class="modal-label">备注</label>
+                                <input class="modal-input" id="roomRemarkInput"/>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn-default-mini" id="roomModalCancel">取消</button>
+                            <button class="btn-primary-mini" id="roomModalSave">保存</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(mask);
+            }
+            // 填充数据
+            document.getElementById('roomTypeInput').value = room.type || '';
+            document.getElementById('roomOriginalInput').value = room.original || '';
+            document.getElementById('roomCurrentInput').value = room.current || '';
+            document.getElementById('roomDiscountInput').value = room.discount || '';
+            document.getElementById('roomRemainInput').value = room.remain || '';
+            document.getElementById('roomStatusSelect').value = room.status || 'available';
+            document.getElementById('roomRemarkInput').value = room.remark || '';
+            // 图片预览与选择
+            let tempImageData = room.image || '';
+            const previewBox = document.getElementById('roomImagePreview');
+            const renderPreview = () => {
+                if (tempImageData) {
+                    previewBox.innerHTML = `<img src="${tempImageData}" alt="房型图片"/>`;
+                } else {
+                    previewBox.innerHTML = `<span class="thumb-empty">暂无图片</span>`;
+                }
+            };
+            renderPreview();
+            const imageInput = document.getElementById('roomImageInput');
+            if (imageInput) {
+                imageInput.disabled = readonly;
+                imageInput.onchange = (ev) => {
+                    const file = ev.target.files && ev.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        const img = new Image();
+                        img.onload = () => {
+                            tempImageData = resizeImgTo16x9(img, 1280, 720);
+                            renderPreview();
+                        };
+                        img.src = reader.result;
+                    };
+                    reader.readAsDataURL(file);
+                };
+            }
+            // 只读处理
+            ['roomTypeInput','roomOriginalInput','roomCurrentInput','roomDiscountInput','roomRemainInput','roomStatusSelect','roomRemarkInput'].forEach(id => {
+                const el = document.getElementById(id);
+                el.disabled = readonly;
+            });
+            document.getElementById('roomModalSave').style.display = readonly ? 'none' : 'inline-block';
+            document.getElementById('roomModalTitle').innerText = readonly ? '房型详情' : (index>=0 ? '修改房型' : '新增房型');
+            // 显示
+            mask.style.display = 'flex';
+            // 事件
+            document.getElementById('roomModalClose').onclick = () => mask.style.display = 'none';
+            document.getElementById('roomModalCancel').onclick = () => mask.style.display = 'none';
+            document.getElementById('roomModalSave').onclick = () => {
+                const payload = {
+                    type: document.getElementById('roomTypeInput').value.trim(),
+                    original: parseInt(document.getElementById('roomOriginalInput').value) || 0,
+                    current: parseInt(document.getElementById('roomCurrentInput').value) || 0,
+                    discount: document.getElementById('roomDiscountInput').value.trim(),
+                    remain: parseInt(document.getElementById('roomRemainInput').value) || 0,
+                    status: document.getElementById('roomStatusSelect').value,
+                    remark: document.getElementById('roomRemarkInput').value.trim(),
+                    image: tempImageData || ''
+                };
+                // 校验
+                if (!payload.type) { alert('请输入房型名称'); return; }
+                // 读取现有列表（优先本地）
+                let stored = [];
+                try { stored = JSON.parse(localStorage.getItem('hotelRooms:' + currentHotelId) || '[]'); } catch (e) { stored = []; }
+                if (!stored.length) {
+                    // 如果本地为空，先复制基础列表
+                    const base = (hotelData.find(h => h.id===currentHotelId)?.priceData?.roomPriceList) || [];
+                    stored = base.slice();
+                }
+                if (index>=0) stored[index] = payload; else stored.push(payload);
+                localStorage.setItem('hotelRooms:' + currentHotelId, JSON.stringify(stored));
+                mask.style.display = 'none';
+                // 重新渲染房型概览
+                const currentHotel = hotelData.find(h => h.id === currentHotelId);
+                if (currentHotel) renderPriceOverview(currentHotel);
+            };
+        }
+
+        // 16:9 居中裁剪并缩放到指定尺寸
+        function resizeImgTo16x9(img, targetW=1280, targetH=720) {
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext('2d');
+            const srcW = img.naturalWidth || img.width;
+            const srcH = img.naturalHeight || img.height;
+            const targetRatio = targetW / targetH;
+            const srcRatio = srcW / srcH;
+            let drawW, drawH, sx, sy, sW, sH;
+            if (srcRatio > targetRatio) {
+                // 源图偏宽，按高度裁剪
+                sH = srcH;
+                sW = Math.floor(srcH * targetRatio);
+                sx = Math.floor((srcW - sW) / 2);
+                sy = 0;
+            } else {
+                // 源图偏高，按宽度裁剪
+                sW = srcW;
+                sH = Math.floor(srcW / targetRatio);
+                sx = 0;
+                sy = Math.floor((srcH - sH) / 2);
+            }
+            ctx.drawImage(img, sx, sy, sW, sH, 0, 0, targetW, targetH);
+            return canvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        // 3. 渲染当日订单情况（复用原有数据，优化表格列名和展示）
+        function renderOrderStatus(hotel) {
+            const tableBody = document.getElementById('orderTableBody');
+            const orderDate = document.getElementById('orderDate');
+            const overview = document.getElementById('orderOverviewContainer');
+            // 格式化当日日期
+            const today = new Date().toLocaleDateString('zh-CN', {year: 'numeric', month: '2-digit', day: '2-digit'}).replace(/\//g, '-');
+            orderDate.innerText = today;
+
+            // 订单状态文本映射
+            const statusText = {
+                checked: "已入住",
+                pending: "待入住",
+                unchecked: "未入住",
+                canceled: "已取消"
+            };
+            // 合并本地保存的订单状态（按订单编号）
+            let storedOrders = [];
+            try {
+                storedOrders = JSON.parse(localStorage.getItem('hotelOrders:' + currentHotelId) || '[]');
+            } catch (e) { storedOrders = []; }
+            const storedMap = new Map(storedOrders.map(o => [o.orderNo, o.status]));
+            let mergedOrderList = (hotel.orderList || []).map(o => ({
+                ...o,
+                status: storedMap.get(o.orderNo) || o.status
+            }));
+            // 概览统计数据
+            const checkedCount = mergedOrderList.filter(o => o.status === 'checked').length;
+            const leaveTodayCount = mergedOrderList.filter(o => o.leave === today).length;
+            const availableRooms = (hotel.priceData?.roomPriceList || []).reduce((sum, r) => sum + (parseInt(r.remain) || 0), 0);
+            const totalRooms = hotel.totalRooms || 0;
+            const occupiedRooms = Math.max(0, totalRooms - availableRooms);
+            overview.innerHTML = `
+                <div class="overview-item">
+                    <div class="overview-label">今日入住</div>
+                    <div class="overview-num">${checkedCount}</div>
+                </div>
+                <div class="overview-item">
+                    <div class="overview-label">今日退房</div>
+                    <div class="overview-num">${leaveTodayCount}</div>
+                </div>
+                <div class="overview-item">
+                    <div class="overview-label">全部可用</div>
+                    <div class="overview-num">${availableRooms}</div>
+                </div>
+                <div class="overview-item">
+                    <div class="overview-label">全部已占用</div>
+                    <div class="overview-num">${occupiedRooms}</div>
+                </div>
+            `;
+            // 渲染订单表格
+            const tableRows = mergedOrderList.map(item => `
+                <tr>
+                    <td>${item.orderNo}</td>
+                    <td>${item.room}</td>
+                    <td>${item.type}</td>
+                    <td>${item.guest}</td>
+                    <td>${item.phone}</td>
+                    <td><span class="order-amount">${item.amount}</span></td>
+                    <td>
+                        <select class="order-status-select ${item.status}" data-order-no="${item.orderNo}">
+                            <option value="unchecked" ${item.status === 'unchecked' ? 'selected' : ''}>未入住</option>
+                            <option value="pending" ${item.status === 'pending' ? 'selected' : ''}>待入住</option>
+                            <option value="checked" ${item.status === 'checked' ? 'selected' : ''}>已入住</option>
+                            <option value="canceled" ${item.status === 'canceled' ? 'selected' : ''}>已取消</option>
+                        </select>
+                    </td>
+                    <td>${item.leave}</td>
+                    <td>${item.payType}</td>
+                </tr>
+            `).join('');
+            tableBody.innerHTML = tableRows;
+
+            // 变更事件：更新状态并持久化
+            const listContainer = document.getElementById('orderListContainer');
+            listContainer.addEventListener('change', function(ev) {
+                const target = ev.target;
+                if (target && target.classList.contains('order-status-select')) {
+                    const orderNo = target.getAttribute('data-order-no');
+                    const newStatus = target.value;
+                    mergedOrderList = mergedOrderList.map(o => o.orderNo === orderNo ? { ...o, status: newStatus } : o);
+                    localStorage.setItem('hotelOrders:' + currentHotelId, JSON.stringify(mergedOrderList));
+                    // 更新选择器颜色
+                    target.classList.remove('checked','pending','unchecked','canceled');
+                    target.classList.add(newStatus);
+                    // 更新概览的“今日入住”
+                    const newChecked = mergedOrderList.filter(o => o.status === 'checked').length;
+                    const firstNum = overview.querySelector('.overview-item .overview-num');
+                    if (firstNum) firstNum.textContent = String(newChecked);
+                }
+            });
+        }
+
+        // ===================== 第四步：页面初始化+选项卡切换 =====================
+        window.onload = function() {
+            // 初始化数据渲染
+            if (currentHotel) {
+                renderBaseInfo(currentHotel);
+                renderPriceOverview(currentHotel);
+                renderOrderStatus(currentHotel);
+            } else {
+                // 无有效酒店数据时的空状态提示
+                const baseContainer = document.getElementById('baseInfoContainer');
+                const priceStatsContainer = document.getElementById('priceStatsContainer');
+                const priceTableBody = document.getElementById('priceTableBody');
+                const orderTableBody = document.getElementById('orderTableBody');
+                
+                baseContainer.innerHTML = `<div class="empty-tip"><i>⚠️</i>未找到该酒店信息，请检查链接是否正确</div>`;
+                priceStatsContainer.innerHTML = `<div class="empty-tip"><i>⚠️</i>未找到该酒店房价信息</div>`;
+                priceTableBody.innerHTML = `<tr><td colspan="7" class="empty-tip">暂无房价数据</td></tr>`;
+                orderTableBody.innerHTML = `<tr><td colspan="9" class="empty-tip">暂无订单数据</td></tr>`;
+            }
+
+            // 选项卡切换逻辑（扩展为3个标签，样式交互不变）
+            const tabItems = document.querySelectorAll('.tab-item');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+
+            // 删除按钮绑定（商户端）
+            const delBtn = document.getElementById('deleteHotelBtn');
+            if (delBtn) {
+                delBtn.addEventListener('click', function(){ handleDeleteHotel(currentHotelId); });
+            }
+
+            tabItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    // 移除所有激活状态
+                    tabItems.forEach(ti => ti.classList.remove('active'));
+                    tabPanels.forEach(tp => tp.style.display = 'none');
+                    // 添加当前激活状态
+                    item.classList.add('active');
+                    const targetTab = item.getAttribute('data-tab');
+                    document.getElementById(targetTab).style.display = 'block';
+                });
+            });
+        }
+    </script>
+</body>
+</html>

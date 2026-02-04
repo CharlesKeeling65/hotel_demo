@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>易宿 - 酒店管理列表</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+        body {
+            background: #f5f7fa;
+            color: #333;
+        }
+        /* 顶部导航栏 - 统一风格 */
+        .top-nav {
+            background: linear-gradient(90deg, #6a85b6 0%, #8b9abc 100%);
+            color: #fff;
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 99;
+        }
+        .nav-logo {
+            display: flex;
+            align-items: center;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        .nav-logo .logo-icon {
+            width: 28px;
+            height: 28px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+            margin-right: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        .logout-btn {
+            padding: 6px 16px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            border-radius: 4px;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .logout-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        /* 主容器 */
+        .container {
+            max-width: 1400px;
+            margin: 32px auto;
+            padding: 0 32px;
+        }
+        /* 页面标题 */
+        .page-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        /* 新增酒店按钮 */
+        .btn-add {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background: #409eff;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-add:hover {
+            background: #337ecc;
+        }
+        /* 酒店卡片列表 */
+        .hotel-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+        }
+        /* 酒店卡片样式 */
+        .hotel-card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            padding: 24px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative; /* 允许在卡片上放置角标 */
+        }
+        .card-thumb {
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+            background: #f8f9fa;
+            margin-bottom: 12px;
+            aspect-ratio: 16 / 9; /* 统一16:9缩略图比例 */
+            max-height: 150px; /* 示例尺寸：约 150px */
+            width: 100%;
+        }
+        /* 未审核卡片使用更紧凑的缩略图 */
+        .card-thumb.small {
+            max-height: 120px;
+            aspect-ratio: 16 / 9;
+        }
+        .card-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .hotel-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        .hotel-card .hotel-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        /* 商家未审核角标 */
+        .merchant-badge {
+            position: absolute;
+            left: 14px;
+            top: 12px;
+            background: #f5a623;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            z-index: 5;
+        }
+        .hotel-card .hotel-attr {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hotel-card .hotel-attr span {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #f5f7fa;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 8px;
+        }
+        .hotel-card .hotel-desc {
+            font-size: 13px;
+            color: #999;
+            margin-top: 16px;
+            line-height: 1.5;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        /* 卡片按钮组 */
+        .card-btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .action-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .action-btn.detail {
+            background: #409eff;
+            color: #fff;
+        }
+        .action-btn.detail:hover {
+            background: #337ecc;
+        }
+        .action-btn.edit {
+            background: #67c23a;
+            color: #fff;
+        }
+        .action-btn.edit:hover {
+            background: #529b2e;
+        }
+        /* 空状态 */
+        .empty-tip {
+            text-align: center;
+            padding: 80px 0;
+            color: #999;
+            font-size: 16px;
+        }
+        /* 响应式适配 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+            .hotel-list {
+                grid-template-columns: 1fr;
+            }
+            .page-title {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="top-nav">
+        <div class="nav-logo">
+            <div class="logo-icon">🏨</div>
+            <span>易宿酒店商家管理后台</span>
+        </div>
+        <!-- 顶部保留用户信息，筛选按钮已下移到页面内容区 -->
+        <div class="user-info">
+            <span id="userWelcome">欢迎</span>
+            <button class="logout-btn" id="logoutBtn">退出登录</button>
+        </div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container">
+        <!-- 页面标题 + 新增酒店按钮 -->
+        <div class="page-title">
+            <span>我的酒店</span>
+            <button class="btn-add" onclick="window.location.href='hotel-edit.html'">
+                ➕ 新增酒店
+            </button>
+        </div>
+        <div id="filterRow" style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+            <button id="tabAll" type="button" class="btn-add" style="background:#fff;color:#333;border:1px solid #e6e6e6;cursor:pointer">全部</button>
+            <button id="tabApproved" type="button" class="btn-add" style="background:#f5f7fa;color:#333;border:1px solid #e6e6e6;cursor:pointer">已审核</button>
+            <button id="tabPending" type="button" class="btn-add" style="background:#fff8ea;color:#333;border:1px solid #f5a623;cursor:pointer">未审核</button>
+        </div>
+
+        <!-- 酒店卡片列表 -->
+        <div class="hotel-list">
+            <!-- 酒店1：海景度假酒店 -->
+            <div class="hotel-card">
+                <div class="card-thumb"><img alt="海景度假酒店" data-hotel-id="1"></div>
+                <div class="hotel-name">海景度假酒店</div>
+                <div class="hotel-attr"><span>⭐⭐⭐⭐⭐ 五星级</span> 上海市浦东新区</div>
+                <div class="hotel-attr">价格区间：880元 - 6880元/晚</div>
+                <div class="hotel-attr">总客房数：280间</div>
+                <div class="hotel-attr">热门房型：海景别墅、亲子主题房</div>
+                <div class="hotel-desc">
+                    毗邻东方明珠、外滩等核心景区，地铁2号线直达，拥有一线海景房、独栋温泉别墅，配套高端餐饮与休闲设施，是亲子度假、商务出行的优选。
+                </div>
+                <div class="card-btn-group">
+                    <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=1'">酒店详情</button>
+                    <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=1'">修改</button>
+                    <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(1)">删除</button>
+                </div>
+            </div>
+
+            <!-- 酒店2：城市商务酒店 -->
+            <div class="hotel-card">
+                <div class="card-thumb"><img alt="城市商务酒店" data-hotel-id="2"></div>
+                <div class="hotel-name">城市商务酒店</div>
+                <div class="hotel-attr"><span>⭐⭐⭐⭐ 四星级</span> 北京市朝阳区</div>
+                <div class="hotel-attr">价格区间：580元 - 2880元/晚</div>
+                <div class="hotel-attr">总客房数：320间</div>
+                <div class="hotel-attr">热门房型：会议室配套房、行政套房</div>
+                <div class="hotel-desc">
+                    位于国贸CBD核心区域，地铁1号线国贸站旁，毗邻SKP购物中心，主打商务房型，配套多个大小会议室，满足企业商务会议、出差需求。
+                </div>
+                <div class="card-btn-group">
+                    <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=2'">酒店详情</button>
+                    <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=2'">修改</button>
+                    <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(2)">删除</button>
+                </div>
+            </div>
+
+            <!-- 酒店3：山水温泉酒店 -->
+            <div class="hotel-card">
+                <div class="card-thumb"><img alt="山水温泉酒店" data-hotel-id="3"></div>
+                <div class="hotel-name">山水温泉酒店</div>
+                <div class="hotel-attr"><span>⭐⭐⭐⭐ 四星级</span> 杭州市西湖区</div>
+                <div class="hotel-attr">价格区间：680元 - 3880元/晚</div>
+                <div class="hotel-attr">总客房数：200间</div>
+                <div class="hotel-attr">热门房型：独栋温泉别墅、亲子温泉房</div>
+                <div class="hotel-desc">
+                    坐落于西湖龙井村旁，毗邻西湖、灵隐寺，主打温泉主题房型，拥有公共温泉区与独栋私汤，周边茶园环绕，自然环境清幽，适合休闲度假。
+                </div>
+                <div class="card-btn-group">
+                    <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=3'">酒店详情</button>
+                    <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=3'">修改</button>
+                    <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(3)">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // 为列表卡片加载酒店缩略图：优先localStorage上传图，其次默认映射
+        (function() {
+            const imgs = document.querySelectorAll('img[data-hotel-id]');
+            imgs.forEach(img => {
+                const id = parseInt(img.getAttribute('data-hotel-id')) || 0;
+                let src = null;
+                try {
+                    src = localStorage.getItem('hotelImage:' + id);
+                } catch (e) { src = null; }
+                if (!src) src = 'pic/hotel_' + id + '.png';
+                img.src = src;
+            });
+        })();
+        // 渲染商家端提交的酒店（来自 localStorage.merchantHotels）
+        (function(){
+            const listContainer = document.querySelector('.hotel-list');
+            if (!listContainer) return;
+            // 创建承载块，避免直接在静态卡片中混合
+            let submissionsWrap = document.getElementById('merchantSubmissions');
+            if (!submissionsWrap) {
+                submissionsWrap = document.createElement('div');
+                submissionsWrap.id = 'merchantSubmissions';
+                submissionsWrap.style.display = 'contents';
+                listContainer.appendChild(submissionsWrap);
+            }
+
+            function loadMerchant() {
+                try {
+                    return JSON.parse(localStorage.getItem('merchantHotels') || '[]');
+                } catch (e) { return []; }
+            }
+
+            function render() {
+                const items = loadMerchant();
+                if (!items.length) { submissionsWrap.innerHTML = ''; return; }
+                const role = sessionStorage.getItem('role') || '';
+                submissionsWrap.innerHTML = items.map(it => {
+                    // 基本操作：详情/修改（始终展示，便于查看与修改）
+                    const opsBase = `
+                        <div class="card-btn-group">
+                            <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=${it.id}'">酒店详情</button>
+                            <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=${it.id}'">修改</button>
+                            <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(${it.id})">删除</button>
+                        </div>
+                    `;
+                    // 管理员在未审核时额外展示通过/驳回
+                    const opsAdmin = (role === 'admin' && it.status === 'pending') ? `
+                        <div style="margin-top:8px; display:flex; gap:8px;">
+                            <button class="action-btn detail" data-op="approve" data-id="${it.id}">通过</button>
+                            <button class="action-btn edit" data-op="reject" data-id="${it.id}">驳回</button>
+                        </div>
+                    ` : '';
+                    const ops = opsBase + opsAdmin;
+                    const imgHtml = it.image ? `<img src="${it.image}" alt="${it.name}">` : `<img src="pic/hotel_${it.id || 0}.png" alt="${it.name}">`;
+                    return `
+                        <div class="hotel-card" data-merchant-id="${it.id}">
+                            <div class="card-thumb">${imgHtml}</div>
+                            <div class="hotel-name">${it.name}</div>
+                            <div class="hotel-attr"><span>${it.star || ''}</span> ${it.address || ''}</div>
+                            <div class="hotel-attr">价格区间：${it.priceRange || ''}</div>
+                            <div class="hotel-attr">总客房数：${it.totalRooms || ''}</div>
+                            <div class="hotel-attr">热门房型：${(it.roomTypes && (Array.isArray(it.roomTypes)? it.roomTypes.join('、') : it.roomTypes)) || ''}</div>
+                            <div class="hotel-desc">${it.discounts ? (Array.isArray(it.discounts)? it.discounts.join('，') : it.discounts) : ''}</div>
+                            ${ops}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // 事件委托：审核操作
+            document.body.addEventListener('click', function(ev) {
+                const t = ev.target;
+                if (!t || !t.dataset) return;
+                const op = t.dataset.op;
+                const id = parseInt(t.dataset.id);
+                if (!op || !id) return;
+                let items = [];
+                try { items = JSON.parse(localStorage.getItem('merchantHotels') || '[]'); } catch(e) { items = []; }
+                const idx = items.findIndex(x => x.id === id);
+                if (idx === -1) return;
+                if (op === 'approve') {
+                    items[idx].status = 'approved';
+                    localStorage.setItem('merchantHotels', JSON.stringify(items));
+                    render();
+                }
+                if (op === 'reject') {
+                    // 驳回则从列表移除
+                    items.splice(idx,1);
+                    localStorage.setItem('merchantHotels', JSON.stringify(items));
+                    render();
+                }
+            });
+
+            render();
+        })();
+            // 渲染已审核加入主库的酒店（来自 localStorage.hotels）
+            (function(){
+                const listContainer = document.querySelector('.hotel-list');
+                if (!listContainer) return;
+                function loadApproved() {
+                    try { return JSON.parse(localStorage.getItem('hotels') || '[]'); } catch(e) { return []; }
+                }
+                const approved = loadApproved();
+                if (!approved.length) return;
+                // append approved hotels as cards
+                const nodes = approved.map(it => {
+                    const div = document.createElement('div');
+                    div.className = 'hotel-card';
+                    // 标记为已审核，以便过滤
+                    div.setAttribute('data-approved', 'true');
+                    div.innerHTML = `
+                        <div class="card-thumb">${it.image ? `<img src="${it.image}" alt="${it.name}">` : `<img src="pic/hotel_${it.id}.png" alt="${it.name}">`}</div>
+                        <div class="hotel-name">${it.name}</div>
+                        <div class="hotel-attr"><span>${it.star || ''}</span> ${it.address || ''}</div>
+                        <div class="hotel-attr">价格区间：${it.priceRange || ''}</div>
+                        <div class="hotel-attr">总客房数：${it.totalRooms || ''}</div>
+                        <div class="hotel-desc"></div>
+                        <div class="card-btn-group">
+                            <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=${it.id}'">酒店详情</button>
+                            <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=${it.id}'">修改</button>
+                            <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(${it.id})">删除</button>
+                        </div>
+                    `;
+                    return div;
+                });
+                nodes.forEach(n => listContainer.appendChild(n));
+            })();
+            // 全局删除函数：移除 merchantHotels / hotels 中的目标 id，并清理关联 localStorage 键
+            function handleDeleteHotel(id) {
+                if (!id) return;
+                if (!confirm('确认删除该酒店？该操作会移除本地存储的酒店数据和相关资源。')) return;
+                try {
+                    let merchants = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
+                    merchants = merchants.filter(h => h.id !== id);
+                    localStorage.setItem('merchantHotels', JSON.stringify(merchants));
+                } catch (e) {}
+                try {
+                    let approved = JSON.parse(localStorage.getItem('hotels') || '[]');
+                    approved = approved.filter(h => h.id !== id);
+                    localStorage.setItem('hotels', JSON.stringify(approved));
+                } catch (e) {}
+                try { localStorage.removeItem('hotelImage:' + id); } catch (e) {}
+                try { localStorage.removeItem('hotelRooms:' + id); } catch (e) {}
+                try { localStorage.removeItem('hotelOrders:' + id); } catch (e) {}
+                try { localStorage.removeItem('priceListDraft:' + id); } catch (e) {}
+                // 刷新页面以更新列表
+                window.location.href = 'dashboard.html';
+            }
+        // 顶部用户信息显示与退出（使用 sessionStorage，实现标签页独立会话）
+        (function() {
+            const welcome = document.getElementById('userWelcome');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const name = sessionStorage.getItem('username') || '';
+            const role = sessionStorage.getItem('role') || 'user';
+            if (welcome) welcome.textContent = name ? `欢迎，${name}（${role}）` : '欢迎，商户';
+            if (logoutBtn) logoutBtn.addEventListener('click', () => {
+                try { sessionStorage.removeItem('username'); sessionStorage.removeItem('role'); } catch(e){}
+                window.location.href = 'loginPage.html';
+            });
+        })();
+
+        // 选项卡过滤逻辑：全部 / 已审核 / 未审核（基于 card 的 data-* 标记）
+        (function setupFilterTabs(){
+            const tabAll = document.getElementById('tabAll');
+            const tabApproved = document.getElementById('tabApproved');
+            const tabPending = document.getElementById('tabPending');
+            const listContainer = document.querySelector('.hotel-list');
+            if (!listContainer) return;
+            function setActive(button){
+                [tabAll,tabApproved,tabPending].forEach(b=>{
+                    if(!b) return;
+                    b.style.opacity = (b===button? '1':'0.7');
+                    b.style.boxShadow = (b===button? '0 2px 8px rgba(0,0,0,0.08)':'none');
+                });
+            }
+            function applyFilter(filter){
+                console.log('applyFilter', filter);
+                const cards = listContainer.querySelectorAll('.hotel-card');
+                cards.forEach(card => {
+                    const isMerchant = card.hasAttribute('data-merchant-id');
+                    const isApproved = card.getAttribute('data-approved') === 'true' || (!isMerchant && !card.hasAttribute('data-merchant-id'));
+                    let show = true;
+                    if (filter === 'approved') show = !!isApproved;
+                    if (filter === 'pending') show = !!isMerchant;
+                    card.style.display = show ? '' : 'none';
+                });
+            }
+            if (tabAll) tabAll.addEventListener('click', ()=>{ setActive(tabAll); applyFilter('all'); });
+            if (tabApproved) tabApproved.addEventListener('click', ()=>{ setActive(tabApproved); applyFilter('approved'); });
+            if (tabPending) tabPending.addEventListener('click', ()=>{ setActive(tabPending); applyFilter('pending'); });
+            // 初始化为全部
+            setActive(tabAll); applyFilter('all');
+        })();
+    </script>
+</body>
+</html>

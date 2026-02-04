@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>易宿 - 管理员审核中心</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:"Microsoft YaHei", sans-serif; }
+        body { background:#f5f7fa; color:#333; }
+        .top-nav { background: linear-gradient(90deg, #6a85b6 0%, #8b9abc 100%); color:#fff; padding:16px 32px; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; box-shadow:0 2px 8px rgba(0,0,0,0.1); }
+        .nav-logo { display:flex; align-items:center; font-size:20px; font-weight:600; }
+        .nav-logo .logo-icon { width:28px; height:28px; background:rgba(255,255,255,0.2); border-radius:4px; margin-right:8px; display:flex; align-items:center; justify-content:center; }
+        .logout-btn { padding:6px 16px; background: rgba(255,255,255,0.2); border:none; border-radius:4px; color:#fff; cursor:pointer; }
+        .container { max-width:1400px; margin:32px auto; padding:0 32px; }
+        .tabs { display:flex; gap:12px; margin-bottom:16px; }
+        .tab { padding:8px 16px; border-radius:20px; background:#fff; border:1px solid #e5e7eb; cursor:pointer; }
+        .tab.active { background:#409eff; color:#fff; border-color:#409eff; }
+        .list { display:grid; grid-template-columns: repeat(3, 1fr); gap:18px; }
+        .card { background:#fff; border-radius:8px; box-shadow:0 2px 12px rgba(0,0,0,0.08); padding:16px; position:relative; }
+        .thumb { border-radius:6px; overflow:hidden; background:#f8f9fa; aspect-ratio:16 / 9; margin-bottom:12px; max-height:150px; width:100%; }
+        .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+        .name { font-size:18px; font-weight:600; margin-bottom:6px; }
+        .line { font-size:14px; color:#666; margin-bottom:4px; }
+        .ops { display:flex; gap:10px; margin-top:10px; }
+        .btn { padding:6px 12px; border:none; border-radius:4px; font-size:14px; cursor:pointer; }
+        .btn.pass { background:#67c23a; color:#fff; }
+        .btn.pass:hover { background:#529b2e; }
+        .btn.reject { background:#f56c6c; color:#fff; }
+        .btn.reject:hover { background:#dd4f4f; }
+        .empty { text-align:center; color:#999; padding:40px 0; }
+        @media (max-width:1100px){ .list{grid-template-columns:repeat(2,1fr);} }
+        @media (max-width:768px){ .list{grid-template-columns:1fr;} }
+    </style>
+</head>
+<body>
+    <div class="top-nav">
+        <div class="nav-logo"><div class="logo-icon">🛡️</div><span>易宿管理员审核中心</span></div>
+        <div style="display:flex;align-items:center;gap:12px">
+            <span id="userWelcome">欢迎</span>
+            <button class="logout-btn" id="logoutBtn">退出登录</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="pending">未审核</div>
+            <div class="tab" data-tab="approved">已审核</div>
+        </div>
+        <div id="pendingPane" class="list"></div>
+        <div id="approvedPane" class="list" style="display:none"></div>
+    </div>
+
+<script>
+function loadSubmissions() {
+    let list = [];
+    try { list = JSON.parse(localStorage.getItem('merchantHotels') || '[]'); } catch(e) { list = []; }
+    return list;
+}
+function saveSubmissions(list) {
+    localStorage.setItem('merchantHotels', JSON.stringify(list));
+}
+function render() {
+    const list = loadSubmissions();
+    const pending = list.filter(i => i.status === 'pending');
+    const approved = list.filter(i => i.status === 'approved');
+        const renderList = (arr, containerId) => {
+        const el = document.getElementById(containerId);
+        if (!arr.length) { el.innerHTML = '<div class="empty">暂无数据</div>'; return; }
+        el.innerHTML = arr.map(item => `
+            <div class="card" data-merchant-id="${item.id}">
+                <div class="thumb">${item.image ? `<img src="${item.image}" alt="hotel">` : `<img src="pic/hotel_${item.id || 0}.png" alt="${item.name}">`}</div>
+                <div class="name">${item.name}</div>
+                <div class="line"><span>${item.star || ''}</span> ${item.address || ''}</div>
+                <div class="line">价格区间：${item.priceRange || ''}</div>
+                <div class="line">总客房数：${item.totalRooms || ''}</div>
+                <div class="line">热门房型：${(item.roomTypes && (Array.isArray(item.roomTypes)? item.roomTypes.join('、') : item.roomTypes)) || ''}</div>
+                <div class="line">${item.discounts ? (Array.isArray(item.discounts)? item.discounts.join('，') : item.discounts) : ''}</div>
+                ${containerId==='pendingPane' ? `
+                <div class="ops">
+                    <button class="btn pass" data-id="${item.id}" data-op="pass">通过审核</button>
+                    <button class="btn reject" data-id="${item.id}" data-op="reject">驳回</button>
+                </div>` : ''}
+            </div>
+        `).join('');
+    };
+    renderList(pending, 'pendingPane');
+    renderList(approved, 'approvedPane');
+}
+
+function bindOps() {
+    document.body.addEventListener('click', function(ev) {
+        const t = ev.target;
+                if (t && t.dataset && t.dataset.op) {
+                    const id = parseInt(t.dataset.id);
+                    let list = loadSubmissions();
+                    const idx = list.findIndex(x => x.id === id);
+                    if (idx === -1) return;
+                    if (t.dataset.op === 'pass') {
+                        // 审核通过：将该酒店加入主库 'hotels' 并从提交队列移除
+                        try {
+                            const hotels = JSON.parse(localStorage.getItem('hotels') || '[]');
+                            // 确保 id 唯一
+                            const newId = list[idx].id || (hotels.length ? Math.max(...hotels.map(h=>h.id)) + 1 : Date.now());
+                            const approved = { ...list[idx], id: newId };
+                            hotels.push(approved);
+                            localStorage.setItem('hotels', JSON.stringify(hotels));
+                        } catch (e) { }
+                        // 从待审中移除
+                        list.splice(idx,1);
+                        saveSubmissions(list);
+                        render();
+                    }
+                    if (t.dataset.op === 'reject') {
+                        // 驳回：从提交中移除
+                        list.splice(idx,1);
+                        saveSubmissions(list);
+                        render();
+                    }
+                }
+    });
+}
+
+function bindTabs() {
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tb => tb.addEventListener('click', () => {
+        tabs.forEach(t => t.classList.remove('active'));
+        tb.classList.add('active');
+        const key = tb.getAttribute('data-tab');
+        document.getElementById('pendingPane').style.display = key==='pending' ? 'grid' : 'none';
+        document.getElementById('approvedPane').style.display = key==='approved' ? 'grid' : 'none';
+    }));
+}
+
+window.onload = function() {
+    render();
+    bindOps();
+    bindTabs();
+    // 顶部用户显示与退出（sessionStorage）
+    (function(){
+        const welcome = document.getElementById('userWelcome');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const name = sessionStorage.getItem('username') || '';
+        const role = sessionStorage.getItem('role') || 'admin';
+        if (welcome) welcome.textContent = name ? `欢迎，${name}（${role}）` : '欢迎，管理员';
+        if (logoutBtn) logoutBtn.addEventListener('click', () => {
+            try { sessionStorage.removeItem('username'); sessionStorage.removeItem('role'); } catch(e){}
+            window.location.href = 'loginPage.html';
+        });
+    })();
+};
+</script>
+</body>
+</html>

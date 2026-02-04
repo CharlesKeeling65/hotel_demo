@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>编辑房型明细</title>
+    <style>
+        body{font-family:"Microsoft YaHei",sans-serif;background:#f5f7fa;margin:0;padding:20px}
+        .card{max-width:980px;margin:20px auto;background:#fff;padding:18px;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+        h2{margin-bottom:12px}
+        .list{display:flex;flex-direction:column;gap:12px}
+        .row{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid #eee;border-radius:6px}
+        .thumb{width:160px;aspect-ratio:16/9;background:#fafafa;border:1px solid #e6e6e6;border-radius:6px;display:grid;place-items:center;overflow:hidden}
+        .thumb img{width:100%;height:100%;object-fit:cover}
+        .meta{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+        .meta input,.meta select{padding:8px;border:1px solid #ddd;border-radius:4px}
+        .ops{display:flex;flex-direction:column;gap:6px}
+        .btn{padding:8px 12px;border-radius:6px;border:none;cursor:pointer}
+        .btn.primary{background:#409eff;color:#fff}
+        .btn.warn{background:#f56c6c;color:#fff}
+        .actions{display:flex;gap:8px}
+        .small{font-size:12px;color:#888}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>编辑房型明细 <span class="small" id="hotelLabel"></span></h2>
+        <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center">
+            <button id="addBtn" class="btn primary">新增房型</button>
+            <button id="saveBtn" class="btn">保存并返回</button>
+            <button id="clearBtn" class="btn warn">清空所有</button>
+            <div style="flex:1"></div>
+            <a id="backLink" href="#">返回编辑页</a>
+        </div>
+        <div id="list" class="list"></div>
+        <template id="rowTpl">
+            <div class="row">
+                <div class="thumb"><span class="thumb-text">无图</span></div>
+                <div class="meta">
+                    <input class="type" placeholder="房型名称" />
+                    <input class="original" placeholder="原价" type="number" />
+                    <input class="current" placeholder="当日价" type="number" />
+                    <input class="discount" placeholder="折扣，如：8折" />
+                    <input class="remain" placeholder="剩余房量" type="number" />
+                    <select class="status"><option value="available">可预订</option><option value="low">房量紧张</option><option value="soldout">已售罄</option></select>
+                    <input class="remark" placeholder="备注" style="grid-column:1 / -1" />
+                </div>
+                <div class="ops">
+                    <input type="file" accept="image/*" class="imgInput" />
+                    <div class="actions">
+                            <button class="btn saveRow">保存行</button>
+                            <button class="btn delRow">删除</button>
+                        </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <script>
+        // 目的：允许为指定 hotelId 新增/编辑多条房型明细，并将结果保存到 localStorage 的 priceListDraft:{id}
+        function getUrlParam(k){const p=new URLSearchParams(location.search);return parseInt(p.get(k))||0}
+        const hotelId = getUrlParam('id');
+        const listEl = document.getElementById('list');
+        const tpl = document.getElementById('rowTpl');
+        const hotelLabel = document.getElementById('hotelLabel');
+        hotelLabel.textContent = hotelId ? ('(hotel id=' + hotelId + ')') : '(新酒店草稿)';
+
+        // resize 函数（与其他页面一致）
+        function resizeImgTo16x9(img, targetW=1280, targetH=720){
+            const canvas=document.createElement('canvas');canvas.width=targetW;canvas.height=targetH;const ctx=canvas.getContext('2d');
+            const srcW=img.naturalWidth||img.width;const srcH=img.naturalHeight||img.height;const targetRatio=targetW/targetH;const srcRatio=srcW/srcH;let drawW,drawH,sx,sy,sW,sH;
+            if(srcRatio>targetRatio){sH=srcH;sW=Math.floor(srcH*targetRatio);sx=Math.floor((srcW-sW)/2);sy=0;}else{sW=srcW;sH=Math.floor(srcW/targetRatio);sx=0;sy=Math.floor((srcH-sH)/2);} 
+            ctx.drawImage(img,sx,sy,sW,sH,0,0,targetW,targetH);return canvas.toDataURL('image/jpeg',0.9);
+        }
+
+        function loadDraft(){
+            try{
+                const key='priceListDraft:' + (hotelId||0);
+                const raw=localStorage.getItem(key);
+                if(raw){return JSON.parse(raw);} 
+            }catch(e){}
+            // fallback: try merchantHotels/hotels? we'll attempt to read merchant/hotels arrays
+            try{
+                const merchants = JSON.parse(localStorage.getItem('merchantHotels')||'[]');
+                const m = merchants.find(h=>h.id===hotelId);
+                if(m && m.priceData && Array.isArray(m.priceData.roomPriceList)) return m.priceData.roomPriceList.slice();
+            }catch(e){}
+            try{
+                const hotels = JSON.parse(localStorage.getItem('hotels')||'[]');
+                const h = hotels.find(x=>x.id===hotelId);
+                if(h && h.priceData && Array.isArray(h.priceData.roomPriceList)) return h.priceData.roomPriceList.slice();
+            }catch(e){}
+            return [];
+        }
+
+        let rows = loadDraft();
+
+        function render(){
+            listEl.innerHTML = '';
+            rows.forEach((r, idx)=>{
+                const node = tpl.content.cloneNode(true);
+                const row = node.querySelector('.row');
+                const thumb = row.querySelector('.thumb');
+                const type = row.querySelector('.type');
+                const original = row.querySelector('.original');
+                const current = row.querySelector('.current');
+                const discount = row.querySelector('.discount');
+                const remain = row.querySelector('.remain');
+                const status = row.querySelector('.status');
+                const remark = row.querySelector('.remark');
+                const imgInput = row.querySelector('.imgInput');
+                const saveRowBtn = row.querySelector('.saveRow');
+                const delBtn = row.querySelector('.delRow');
+
+                type.value = r.type || '';
+                original.value = r.original || '';
+                current.value = r.current || '';
+                discount.value = r.discount || '';
+                remain.value = r.remain || '';
+                status.value = r.status || 'available';
+                remark.value = r.remark || '';
+                if(r.image){ thumb.innerHTML = '<img src="'+r.image+'">'; }
+
+                imgInput.addEventListener('change', (ev)=>{
+                    const f = ev.target.files && ev.target.files[0]; if(!f) return;
+                    const rd = new FileReader(); rd.onload = ()=>{
+                        const img = new Image(); img.onload = ()=>{ const data = resizeImgTo16x9(img,1280,720); thumb.innerHTML = '<img src="'+data+'">'; r.image = data; };
+                        img.src = rd.result;
+                    }; rd.readAsDataURL(f);
+                });
+
+                if (saveRowBtn) {
+                    saveRowBtn.addEventListener('click', ()=>{
+                        r.type = type.value.trim(); r.original = parseInt(original.value)||0; r.current = parseInt(current.value)||0; r.discount = discount.value.trim(); r.remain = parseInt(remain.value)||0; r.status = status.value; r.remark = remark.value.trim();
+                        rows[idx] = r; persistDraft(); render();
+                    });
+                }
+                if (delBtn) {
+                    delBtn.addEventListener('click', ()=>{ if(confirm('确认删除该房型？')){ rows.splice(idx,1); persistDraft(); render(); } });
+                }
+
+                listEl.appendChild(node);
+            });
+        }
+
+        function persistDraft(){
+            try{ localStorage.setItem('priceListDraft:' + (hotelId||0), JSON.stringify(rows)); }catch(e){}
+        }
+
+        document.getElementById('addBtn').addEventListener('click', ()=>{ rows.push({type:'',original:0,current:0,discount:'',remain:0,status:'available',remark:'',image:''}); render(); });
+        document.getElementById('saveBtn').addEventListener('click', ()=>{ persistDraft(); alert('已保存草稿，返回编辑页将自动填充'); window.location.href = 'hotel-edit.html' + (hotelId?('?id='+hotelId):''); });
+        document.getElementById('clearBtn').addEventListener('click', ()=>{ if(confirm('清空所有房型草稿？')){ rows=[]; persistDraft(); render(); } });
+        document.getElementById('backLink').addEventListener('click', (e)=>{ e.preventDefault(); window.location.href='hotel-edit.html' + (hotelId?('?id='+hotelId):''); });
+
+        render();
+    </script>
+</body>
+</html>

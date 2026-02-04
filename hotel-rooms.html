@@ -73,13 +73,23 @@
             ctx.drawImage(img,sx,sy,sW,sH,0,0,targetW,targetH);return canvas.toDataURL('image/jpeg',0.9);
         }
 
-        function loadDraft(){
+        async function loadDraft(){
+            // 优先从后端读取房型列表（若为已有酒店），否则回退到本地草稿/示例数据
+            if (hotelId && hotelId > 0) {
+                try {
+                    const r = await fetch(`/api/hotels/${hotelId}/rooms`);
+                    if (r.ok) {
+                        const j = await r.json();
+                        return Array.isArray(j.data) ? j.data : [];
+                    }
+                } catch(e) { console.warn('fetch rooms failed', e); }
+            }
             try{
                 const key='priceListDraft:' + (hotelId||0);
                 const raw=localStorage.getItem(key);
                 if(raw){return JSON.parse(raw);} 
             }catch(e){}
-            // fallback: try merchantHotels/hotels? we'll attempt to read merchant/hotels arrays
+            // fallback: try merchantHotels/hotels
             try{
                 const merchants = JSON.parse(localStorage.getItem('merchantHotels')||'[]');
                 const m = merchants.find(h=>h.id===hotelId);
@@ -93,7 +103,7 @@
             return [];
         }
 
-        let rows = loadDraft();
+        let rows = [];
 
         function render(){
             listEl.innerHTML = '';
@@ -143,16 +153,25 @@
             });
         }
 
-        function persistDraft(){
+        async function persistDraft(){
+            // 若为已有酒店，优先同步到后端；失败时回退到 localStorage 草稿
+            if (hotelId && hotelId > 0) {
+                try {
+                    const r = await fetch(`/api/hotels/${hotelId}/rooms`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(rows) });
+                    if (r.ok) return true;
+                } catch(e) { console.warn('persist rooms api failed', e); }
+            }
             try{ localStorage.setItem('priceListDraft:' + (hotelId||0), JSON.stringify(rows)); }catch(e){}
+            return true;
         }
 
         document.getElementById('addBtn').addEventListener('click', ()=>{ rows.push({type:'',original:0,current:0,discount:'',remain:0,status:'available',remark:'',image:''}); render(); });
-        document.getElementById('saveBtn').addEventListener('click', ()=>{ persistDraft(); alert('已保存草稿，返回编辑页将自动填充'); window.location.href = 'hotel-edit.html' + (hotelId?('?id='+hotelId):''); });
+        document.getElementById('saveBtn').addEventListener('click', async ()=>{ await persistDraft(); alert('已保存草稿，返回编辑页将自动填充'); window.location.href = 'hotel-edit.html' + (hotelId?('?id='+hotelId):''); });
         document.getElementById('clearBtn').addEventListener('click', ()=>{ if(confirm('清空所有房型草稿？')){ rows=[]; persistDraft(); render(); } });
         document.getElementById('backLink').addEventListener('click', (e)=>{ e.preventDefault(); window.location.href='hotel-edit.html' + (hotelId?('?id='+hotelId):''); });
 
-        render();
+        // 初始加载：异步拿到草稿/房型数据后渲染
+        (async function(){ rows = await loadDraft(); render(); })();
     </script>
 </body>
 </html>

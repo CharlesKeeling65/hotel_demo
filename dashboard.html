@@ -258,195 +258,120 @@
             <button id="tabPending" type="button" class="btn-add" style="background:#fff8ea;color:#333;border:1px solid #f5a623;cursor:pointer">未审核</button>
         </div>
 
-        <!-- 酒店卡片列表 -->
-        <div class="hotel-list">
-            <!-- 酒店1：海景度假酒店 -->
-            <div class="hotel-card">
-                <div class="card-thumb"><img alt="海景度假酒店" data-hotel-id="1"></div>
-                <div class="hotel-name">海景度假酒店</div>
-                <div class="hotel-attr"><span>⭐⭐⭐⭐⭐ 五星级</span> 上海市浦东新区</div>
-                <div class="hotel-attr">价格区间：880元 - 6880元/晚</div>
-                <div class="hotel-attr">总客房数：280间</div>
-                <div class="hotel-attr">热门房型：海景别墅、亲子主题房</div>
-                <div class="hotel-desc">
-                    毗邻东方明珠、外滩等核心景区，地铁2号线直达，拥有一线海景房、独栋温泉别墅，配套高端餐饮与休闲设施，是亲子度假、商务出行的优选。
-                </div>
-                <div class="card-btn-group">
-                    <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=1'">酒店详情</button>
-                    <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=1'">修改</button>
-                    <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(1)">删除</button>
-                </div>
-            </div>
-
-            <!-- 酒店2：城市商务酒店 -->
-            <div class="hotel-card">
-                <div class="card-thumb"><img alt="城市商务酒店" data-hotel-id="2"></div>
-                <div class="hotel-name">城市商务酒店</div>
-                <div class="hotel-attr"><span>⭐⭐⭐⭐ 四星级</span> 北京市朝阳区</div>
-                <div class="hotel-attr">价格区间：580元 - 2880元/晚</div>
-                <div class="hotel-attr">总客房数：320间</div>
-                <div class="hotel-attr">热门房型：会议室配套房、行政套房</div>
-                <div class="hotel-desc">
-                    位于国贸CBD核心区域，地铁1号线国贸站旁，毗邻SKP购物中心，主打商务房型，配套多个大小会议室，满足企业商务会议、出差需求。
-                </div>
-                <div class="card-btn-group">
-                    <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=2'">酒店详情</button>
-                    <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=2'">修改</button>
-                    <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(2)">删除</button>
-                </div>
-            </div>
-
-            <!-- 酒店3：山水温泉酒店 -->
-            <div class="hotel-card">
-                <div class="card-thumb"><img alt="山水温泉酒店" data-hotel-id="3"></div>
-                <div class="hotel-name">山水温泉酒店</div>
-                <div class="hotel-attr"><span>⭐⭐⭐⭐ 四星级</span> 杭州市西湖区</div>
-                <div class="hotel-attr">价格区间：680元 - 3880元/晚</div>
-                <div class="hotel-attr">总客房数：200间</div>
-                <div class="hotel-attr">热门房型：独栋温泉别墅、亲子温泉房</div>
-                <div class="hotel-desc">
-                    坐落于西湖龙井村旁，毗邻西湖、灵隐寺，主打温泉主题房型，拥有公共温泉区与独栋私汤，周边茶园环绕，自然环境清幽，适合休闲度假。
-                </div>
-                <div class="card-btn-group">
-                    <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=3'">酒店详情</button>
-                    <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=3'">修改</button>
-                    <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(3)">删除</button>
-                </div>
-            </div>
-        </div>
+        <!-- 酒店卡片列表（由后端数据渲染） -->
+        <div class="hotel-list"></div>
     </div>
     <script>
-        // 为列表卡片加载酒店缩略图：优先localStorage上传图，其次默认映射
-        (function() {
-            const imgs = document.querySelectorAll('img[data-hotel-id]');
-            imgs.forEach(img => {
-                const id = parseInt(img.getAttribute('data-hotel-id')) || 0;
-                let src = null;
-                try {
-                    src = localStorage.getItem('hotelImage:' + id);
-                } catch (e) { src = null; }
-                if (!src) src = 'pic/hotel_' + id + '.png';
-                img.src = src;
-            });
-        })();
-        // 渲染商家端提交的酒店（来自 localStorage.merchantHotels）
+        // 渲染逻辑：从后端拉取已审核酒店与商家提交（submissions）并渲染
         (function(){
             const listContainer = document.querySelector('.hotel-list');
             if (!listContainer) return;
-            // 创建承载块，避免直接在静态卡片中混合
-            let submissionsWrap = document.getElementById('merchantSubmissions');
-            if (!submissionsWrap) {
-                submissionsWrap = document.createElement('div');
-                submissionsWrap.id = 'merchantSubmissions';
-                submissionsWrap.style.display = 'contents';
-                listContainer.appendChild(submissionsWrap);
+
+            function imgFor(h) {
+                try { if (h.image) return h.image; } catch(e){}
+                return 'pic/hotel_' + (h.id||0) + '.png';
             }
 
-            function loadMerchant() {
+            function makeHotelCard(h, opts={approved:true}){
+                const div = document.createElement('div');
+                div.className = 'hotel-card';
+                if (opts.approved) div.setAttribute('data-approved','true');
+                if (!opts.approved) div.setAttribute('data-merchant-id', h.id||'');
+                const roomTypes = (h.roomTypes && Array.isArray(h.roomTypes)) ? h.roomTypes.join('、') : (h.roomTypes||'');
+                const discounts = (h.discounts && Array.isArray(h.discounts)) ? h.discounts.join('，') : (h.discounts||'');
+                div.innerHTML = `
+                    <div class="card-thumb"><img src="${imgFor(h)}" alt="${h.name||''}"></div>
+                    <div class="hotel-name">${h.name||''}</div>
+                    <div class="hotel-attr"><span>${h.star||''}</span> ${h.address||''}</div>
+                    <div class="hotel-attr">价格区间：${h.priceRange||''}</div>
+                    <div class="hotel-attr">总客房数：${h.totalRooms||''}</div>
+                    <div class="hotel-attr">热门房型：${roomTypes}</div>
+                    <div class="hotel-desc">${discounts}</div>
+                    <div class="card-btn-group">
+                        <button class="action-btn detail" data-id="${h.id}">酒店详情</button>
+                        <button class="action-btn edit" data-id="${h.id}">修改</button>
+                        <button class="action-btn delete" data-id="${h.id}">删除</button>
+                    </div>
+                `;
+                return div;
+            }
+
+            async function loadAndRender(){
+                listContainer.innerHTML = '';
+                // first render submissions (merchant drafts)
                 try {
-                    return JSON.parse(localStorage.getItem('merchantHotels') || '[]');
-                } catch (e) { return []; }
+                    const sres = await fetch('/api/submissions');
+                    const sjson = await sres.json();
+                    if (sjson && Array.isArray(sjson.data) && sjson.data.length) {
+                        sjson.data.forEach(it => {
+                            const card = makeHotelCard(it, {approved:false});
+                            // admin actions for pending
+                            const role = sessionStorage.getItem('role') || '';
+                            if (role === 'admin' && (it.status === 'pending' || !it.status)) {
+                                const adminBox = document.createElement('div');
+                                adminBox.style.marginTop = '8px';
+                                adminBox.style.display = 'flex';
+                                adminBox.style.gap = '8px';
+                                adminBox.innerHTML = `<button class="action-btn approve" data-id="${it.id}">通过</button><button class="action-btn reject" data-id="${it.id}">驳回</button>`;
+                                card.appendChild(adminBox);
+                            }
+                            listContainer.appendChild(card);
+                        });
+                    }
+                } catch (e) { console.warn('load submissions failed', e); }
+
+                // next render approved hotels
+                try {
+                    const hres = await fetch('/api/hotels');
+                    const hjson = await hres.json();
+                    if (hjson && Array.isArray(hjson.data) && hjson.data.length) {
+                        hjson.data.forEach(h => listContainer.appendChild(makeHotelCard(h, {approved:true})));
+                    }
+                } catch (e) { console.warn('load hotels failed', e); }
             }
 
-            function render() {
-                const items = loadMerchant();
-                if (!items.length) { submissionsWrap.innerHTML = ''; return; }
-                const role = sessionStorage.getItem('role') || '';
-                submissionsWrap.innerHTML = items.map(it => {
-                    // 基本操作：详情/修改（始终展示，便于查看与修改）
-                    const opsBase = `
-                        <div class="card-btn-group">
-                            <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=${it.id}'">酒店详情</button>
-                            <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=${it.id}'">修改</button>
-                            <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(${it.id})">删除</button>
-                        </div>
-                    `;
-                    // 管理员在未审核时额外展示通过/驳回
-                    const opsAdmin = (role === 'admin' && it.status === 'pending') ? `
-                        <div style="margin-top:8px; display:flex; gap:8px;">
-                            <button class="action-btn detail" data-op="approve" data-id="${it.id}">通过</button>
-                            <button class="action-btn edit" data-op="reject" data-id="${it.id}">驳回</button>
-                        </div>
-                    ` : '';
-                    const ops = opsBase + opsAdmin;
-                    const imgHtml = it.image ? `<img src="${it.image}" alt="${it.name}">` : `<img src="pic/hotel_${it.id || 0}.png" alt="${it.name}">`;
-                    return `
-                        <div class="hotel-card" data-merchant-id="${it.id}">
-                            <div class="card-thumb">${imgHtml}</div>
-                            <div class="hotel-name">${it.name}</div>
-                            <div class="hotel-attr"><span>${it.star || ''}</span> ${it.address || ''}</div>
-                            <div class="hotel-attr">价格区间：${it.priceRange || ''}</div>
-                            <div class="hotel-attr">总客房数：${it.totalRooms || ''}</div>
-                            <div class="hotel-attr">热门房型：${(it.roomTypes && (Array.isArray(it.roomTypes)? it.roomTypes.join('、') : it.roomTypes)) || ''}</div>
-                            <div class="hotel-desc">${it.discounts ? (Array.isArray(it.discounts)? it.discounts.join('，') : it.discounts) : ''}</div>
-                            ${ops}
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            // 事件委托：审核操作
-            document.body.addEventListener('click', function(ev) {
+            // delegate clicks for card buttons
+            document.body.addEventListener('click', async (ev) => {
                 const t = ev.target;
-                if (!t || !t.dataset) return;
-                const op = t.dataset.op;
-                const id = parseInt(t.dataset.id);
-                if (!op || !id) return;
-                let items = [];
-                try { items = JSON.parse(localStorage.getItem('merchantHotels') || '[]'); } catch(e) { items = []; }
-                const idx = items.findIndex(x => x.id === id);
-                if (idx === -1) return;
-                if (op === 'approve') {
-                    items[idx].status = 'approved';
-                    localStorage.setItem('merchantHotels', JSON.stringify(items));
-                    render();
+                if (!t) return;
+                const id = t.dataset && t.dataset.id ? parseInt(t.dataset.id) : null;
+                if (t.classList.contains('detail') && id) return window.location.href = `hotel-detail.html?id=${id}`;
+                if (t.classList.contains('edit') && id) return window.location.href = `hotel-edit.html?id=${id}`;
+                if (t.classList.contains('delete') && id) {
+                    if (!confirm('确认删除该酒店？')) return;
+                    try {
+                        // try delete hotel first (approved)
+                        const res = await fetch(`/api/hotels/${id}`, { method: 'DELETE' });
+                        if (res.ok) { loadAndRender(); return; }
+                    } catch(e){}
+                    // else try reject submission
+                    try {
+                        await fetch(`/api/submissions/${id}/reject`, { method: 'POST' });
+                        loadAndRender();
+                    } catch (e) { console.error(e); alert('删除失败'); }
                 }
-                if (op === 'reject') {
-                    // 驳回则从列表移除
-                    items.splice(idx,1);
-                    localStorage.setItem('merchantHotels', JSON.stringify(items));
-                    render();
+                if (t.classList.contains('approve') && id) {
+                    try {
+                        const res = await fetch(`/api/submissions/${id}/approve`, { method: 'POST' });
+                        if (res.ok) { loadAndRender(); }
+                    } catch(e){ console.error(e); alert('通过失败'); }
+                }
+                if (t.classList.contains('reject') && id) {
+                    try { await fetch(`/api/submissions/${id}/reject`, { method: 'POST' }); loadAndRender(); } catch(e){ console.error(e); alert('驳回失败'); }
                 }
             });
 
-            render();
+            // initial load
+            loadAndRender();
         })();
-            // 渲染已审核加入主库的酒店（来自 localStorage.hotels）
-            (function(){
-                const listContainer = document.querySelector('.hotel-list');
-                if (!listContainer) return;
-                function loadApproved() {
-                    try { return JSON.parse(localStorage.getItem('hotels') || '[]'); } catch(e) { return []; }
-                }
-                const approved = loadApproved();
-                if (!approved.length) return;
-                // append approved hotels as cards
-                const nodes = approved.map(it => {
-                    const div = document.createElement('div');
-                    div.className = 'hotel-card';
-                    // 标记为已审核，以便过滤
-                    div.setAttribute('data-approved', 'true');
-                    div.innerHTML = `
-                        <div class="card-thumb">${it.image ? `<img src="${it.image}" alt="${it.name}">` : `<img src="pic/hotel_${it.id}.png" alt="${it.name}">`}</div>
-                        <div class="hotel-name">${it.name}</div>
-                        <div class="hotel-attr"><span>${it.star || ''}</span> ${it.address || ''}</div>
-                        <div class="hotel-attr">价格区间：${it.priceRange || ''}</div>
-                        <div class="hotel-attr">总客房数：${it.totalRooms || ''}</div>
-                        <div class="hotel-desc"></div>
-                        <div class="card-btn-group">
-                            <button class="action-btn detail" onclick="window.location.href='hotel-detail.html?id=${it.id}'">酒店详情</button>
-                            <button class="action-btn edit" onclick="window.location.href='hotel-edit.html?id=${it.id}'">修改</button>
-                            <button class="action-btn" style="background:#f56c6c;color:#fff;" onclick="handleDeleteHotel(${it.id})">删除</button>
-                        </div>
-                    `;
-                    return div;
-                });
-                nodes.forEach(n => listContainer.appendChild(n));
-            })();
-            // 全局删除函数：移除 merchantHotels / hotels 中的目标 id，并清理关联 localStorage 键
-            function handleDeleteHotel(id) {
+            // 全局删除函数：优先调用后端删除接口，失败时回退到本地清理
+            async function handleDeleteHotel(id) {
                 if (!id) return;
-                if (!confirm('确认删除该酒店？该操作会移除本地存储的酒店数据和相关资源。')) return;
+                if (!confirm('确认删除该酒店？该操作会移除酒店及其关联数据。')) return;
+                try {
+                    const resp = await fetch(`/api/hotels/${id}`, { method: 'DELETE' });
+                    if (resp.ok) { window.location.href = 'dashboard.html'; return; }
+                } catch(e) { console.warn('delete api failed', e); }
                 try {
                     let merchants = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
                     merchants = merchants.filter(h => h.id !== id);
@@ -461,7 +386,6 @@
                 try { localStorage.removeItem('hotelRooms:' + id); } catch (e) {}
                 try { localStorage.removeItem('hotelOrders:' + id); } catch (e) {}
                 try { localStorage.removeItem('priceListDraft:' + id); } catch (e) {}
-                // 刷新页面以更新列表
                 window.location.href = 'dashboard.html';
             }
         // 顶部用户信息显示与退出（使用 sessionStorage，实现标签页独立会话）

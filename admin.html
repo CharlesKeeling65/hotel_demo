@@ -50,19 +50,34 @@
     </div>
 
 <script>
-function loadSubmissions() {
-    let list = [];
-    try { list = JSON.parse(localStorage.getItem('merchantHotels') || '[]'); } catch(e) { list = []; }
-    return list;
+async function loadSubmissions() {
+    try {
+        const r = await fetch('/api/submissions');
+        if (r.ok) {
+            const j = await r.json();
+            return Array.isArray(j.data) ? j.data : [];
+        }
+    } catch (e) { console.warn('load submissions api failed', e); }
+    // fallback to localStorage
+    try { return JSON.parse(localStorage.getItem('merchantHotels') || '[]'); } catch(e){ return []; }
 }
-function saveSubmissions(list) {
-    localStorage.setItem('merchantHotels', JSON.stringify(list));
+
+async function loadApprovedHotels() {
+    try {
+        const r = await fetch('/api/hotels');
+        if (r.ok) {
+            const j = await r.json();
+            return Array.isArray(j.data) ? j.data : [];
+        }
+    } catch(e) { console.warn('load hotels api failed', e); }
+    try { return JSON.parse(localStorage.getItem('hotels') || '[]'); } catch(e) { return []; }
 }
-function render() {
-    const list = loadSubmissions();
+
+async function render() {
+    const list = await loadSubmissions();
     const pending = list.filter(i => i.status === 'pending');
-    const approved = list.filter(i => i.status === 'approved');
-        const renderList = (arr, containerId) => {
+    const approved = await loadApprovedHotels();
+    const renderList = (arr, containerId, isPending=false) => {
         const el = document.getElementById(containerId);
         if (!arr.length) { el.innerHTML = '<div class="empty">暂无数据</div>'; return; }
         el.innerHTML = arr.map(item => `
@@ -74,7 +89,7 @@ function render() {
                 <div class="line">总客房数：${item.totalRooms || ''}</div>
                 <div class="line">热门房型：${(item.roomTypes && (Array.isArray(item.roomTypes)? item.roomTypes.join('、') : item.roomTypes)) || ''}</div>
                 <div class="line">${item.discounts ? (Array.isArray(item.discounts)? item.discounts.join('，') : item.discounts) : ''}</div>
-                ${containerId==='pendingPane' ? `
+                ${isPending ? `
                 <div class="ops">
                     <button class="btn pass" data-id="${item.id}" data-op="pass">通过审核</button>
                     <button class="btn reject" data-id="${item.id}" data-op="reject">驳回</button>
@@ -82,40 +97,48 @@ function render() {
             </div>
         `).join('');
     };
-    renderList(pending, 'pendingPane');
-    renderList(approved, 'approvedPane');
+    renderList(pending, 'pendingPane', true);
+    renderList(approved, 'approvedPane', false);
 }
 
 function bindOps() {
-    document.body.addEventListener('click', function(ev) {
+    document.body.addEventListener('click', async function(ev) {
         const t = ev.target;
-                if (t && t.dataset && t.dataset.op) {
-                    const id = parseInt(t.dataset.id);
-                    let list = loadSubmissions();
-                    const idx = list.findIndex(x => x.id === id);
+        if (t && t.dataset && t.dataset.op) {
+            const id = parseInt(t.dataset.id);
+            if (t.dataset.op === 'pass') {
+                try {
+                    const r = await fetch(`/api/submissions/${id}/approve`, { method: 'POST' });
+                    if (r.ok) { await render(); return; }
+                } catch(e) { console.warn('approve api failed', e); }
+                // 后备：本地处理（尽量兼容）
+                try {
+                    let list = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
+                    const idx = list.findIndex(x=>x.id===id);
                     if (idx === -1) return;
-                    if (t.dataset.op === 'pass') {
-                        // 审核通过：将该酒店加入主库 'hotels' 并从提交队列移除
-                        try {
-                            const hotels = JSON.parse(localStorage.getItem('hotels') || '[]');
-                            // 确保 id 唯一
-                            const newId = list[idx].id || (hotels.length ? Math.max(...hotels.map(h=>h.id)) + 1 : Date.now());
-                            const approved = { ...list[idx], id: newId };
-                            hotels.push(approved);
-                            localStorage.setItem('hotels', JSON.stringify(hotels));
-                        } catch (e) { }
-                        // 从待审中移除
-                        list.splice(idx,1);
-                        saveSubmissions(list);
-                        render();
-                    }
-                    if (t.dataset.op === 'reject') {
-                        // 驳回：从提交中移除
-                        list.splice(idx,1);
-                        saveSubmissions(list);
-                        render();
-                    }
-                }
+                    const hotels = JSON.parse(localStorage.getItem('hotels') || '[]');
+                    const newId = list[idx].id || (hotels.length ? Math.max(...hotels.map(h=>h.id)) + 1 : Date.now());
+                    hotels.push({ ...list[idx], id: newId });
+                    localStorage.setItem('hotels', JSON.stringify(hotels));
+                    list.splice(idx,1);
+                    localStorage.setItem('merchantHotels', JSON.stringify(list));
+                    await render();
+                } catch(e){ console.error(e); }
+            }
+            if (t.dataset.op === 'reject') {
+                try {
+                    const r = await fetch(`/api/submissions/${id}/reject`, { method: 'POST' });
+                    if (r.ok) { await render(); return; }
+                } catch(e) { console.warn('reject api failed', e); }
+                // 后备：本地删除
+                try {
+                    let list = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
+                    list = list.filter(x=>x.id!==id);
+                    localStorage.setItem('merchantHotels', JSON.stringify(list));
+                    await render();
+                } catch(e){ console.error(e); }
+            }
+        }
     });
 }
 

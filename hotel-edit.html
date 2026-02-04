@@ -456,8 +456,20 @@
                 });
             }
 
-            // 加载房型草稿（若存在），优先填充到 textarea
-            (function loadPriceDraft(){
+            // 加载房型草稿（优先尝试从后端读取房型数据，回退到本地草稿）
+            (async function loadPriceDraft(){
+                try {
+                    if (editHotelId && editHotelId > 0) {
+                        const r = await fetch(`/api/hotels/${editHotelId}/rooms`);
+                        if (r.ok) {
+                            const j = await r.json();
+                            const arr = Array.isArray(j.data) ? j.data : [];
+                            const txtEl = document.getElementById('priceListJson');
+                            if (txtEl && !txtEl.value.trim()) txtEl.value = JSON.stringify(arr, null, 2);
+                            return;
+                        }
+                    }
+                } catch(e) { console.warn('load rooms from api failed', e); }
                 try {
                     const key = 'priceListDraft:' + (editHotelId || 0);
                     const draft = localStorage.getItem(key);
@@ -472,38 +484,72 @@
             if (isEdit) {
                 pageTitleText.innerText = '修改酒店信息';
                 hotelIdInput.value = editHotelId;
-                // 匹配对应酒店数据
-                const currentHotel = hotelData.find(item => item.id === editHotelId);
-                if (currentHotel) {
-                    // 预填所有字段
-                    document.getElementById('name').value = currentHotel.name || '';
-                    document.getElementById('nameEn').value = currentHotel.nameEn || '';
-                    document.getElementById('star').value = currentHotel.star || '';
-                    document.getElementById('openTime').value = currentHotel.openTime || '';
-                    document.getElementById('address').value = currentHotel.address || '';
-                    document.getElementById('priceRange').value = currentHotel.priceRange || '';
-                    document.getElementById('totalRooms').value = currentHotel.totalRooms || '';
-                    document.getElementById('roomTypes').value = currentHotel.roomTypes || '';
-                    document.getElementById('scenicSpots').value = currentHotel.scenicSpots || '';
-                    document.getElementById('trafficMall').value = currentHotel.trafficMall || '';
-                    document.getElementById('discounts').value = currentHotel.discounts || '';
-                    // 预填房型明细 JSON（若存在 priceData）
+                // 异步从后端获取酒店详情并预填表单；若失败回退到本地示例数据
+                (async function loadHotelData(id){
                     try {
-                        const exist = currentHotel.priceData && currentHotel.priceData.roomPriceList ? currentHotel.priceData.roomPriceList : [];
-                        document.getElementById('priceListJson').value = JSON.stringify(exist, null, 2);
-                    } catch (e) { document.getElementById('priceListJson').value = ''; }
-                } else {
-                    alert('未找到该酒店信息，将跳转为新增模式');
-                    pageTitleText.innerText = '新增酒店信息';
-                    hotelIdInput.value = 0;
-                }
+                        const r = await fetch(`/api/hotels/${id}`);
+                        if (r.ok) {
+                            const j = await r.json();
+                            const currentHotel = j.data || null;
+                            if (currentHotel) {
+                                document.getElementById('name').value = currentHotel.name || '';
+                                document.getElementById('nameEn').value = currentHotel.nameEn || '';
+                                document.getElementById('star').value = currentHotel.star || '';
+                                document.getElementById('openTime').value = currentHotel.openTime || '';
+                                document.getElementById('address').value = currentHotel.address || '';
+                                document.getElementById('priceRange').value = currentHotel.priceRange || '';
+                                document.getElementById('totalRooms').value = currentHotel.totalRooms || '';
+                                document.getElementById('roomTypes').value = currentHotel.roomTypes || '';
+                                document.getElementById('scenicSpots').value = currentHotel.scenicSpots || '';
+                                document.getElementById('trafficMall').value = currentHotel.trafficMall || '';
+                                document.getElementById('discounts').value = currentHotel.discounts || '';
+                                try {
+                                    const exist = currentHotel.priceData && currentHotel.priceData.roomPriceList ? currentHotel.priceData.roomPriceList : [];
+                                    document.getElementById('priceListJson').value = JSON.stringify(exist, null, 2);
+                                } catch (e) { document.getElementById('priceListJson').value = ''; }
+                                // 单图回显
+                                if (currentHotel.image) { hotelImage = currentHotel.image; renderSinglePreview(hotelImage); }
+                                return;
+                            }
+                        }
+                    } catch(e) { console.warn('load hotel api failed', e); }
+                    // 回退到本地示例数据
+                    const currentHotel = hotelData.find(item => item.id === editHotelId);
+                    if (currentHotel) {
+                        document.getElementById('name').value = currentHotel.name || '';
+                        document.getElementById('nameEn').value = currentHotel.nameEn || '';
+                        document.getElementById('star').value = currentHotel.star || '';
+                        document.getElementById('openTime').value = currentHotel.openTime || '';
+                        document.getElementById('address').value = currentHotel.address || '';
+                        document.getElementById('priceRange').value = currentHotel.priceRange || '';
+                        document.getElementById('totalRooms').value = currentHotel.totalRooms || '';
+                        document.getElementById('roomTypes').value = currentHotel.roomTypes || '';
+                        document.getElementById('scenicSpots').value = currentHotel.scenicSpots || '';
+                        document.getElementById('trafficMall').value = currentHotel.trafficMall || '';
+                        document.getElementById('discounts').value = currentHotel.discounts || '';
+                        try {
+                            const exist = currentHotel.priceData && currentHotel.priceData.roomPriceList ? currentHotel.priceData.roomPriceList : [];
+                            document.getElementById('priceListJson').value = JSON.stringify(exist, null, 2);
+                        } catch (e) { document.getElementById('priceListJson').value = ''; }
+                    } else {
+                        alert('未找到该酒店信息，将跳转为新增模式');
+                        pageTitleText.innerText = '新增酒店信息';
+                        hotelIdInput.value = 0;
+                    }
+                })(editHotelId);
+
                 // 显示删除按钮（仅修改模式可见）
                 const delBtn = document.getElementById('deleteBtn');
                 if (delBtn) {
                     delBtn.style.display = 'inline-block';
-                    delBtn.addEventListener('click', function(){
+                    delBtn.addEventListener('click', async function(){
                         if (!confirm('确认删除该酒店？该操作将从商家提交和已审核列表中移除该酒店及关联数据。')) return;
                         const id = editHotelId;
+                        try {
+                            const resp = await fetch(`/api/hotels/${id}`, { method: 'DELETE' });
+                            if (resp.ok) { try { localStorage.removeItem('hotelImage:' + id); } catch(e){}; window.location.href='dashboard.html'; return; }
+                        } catch(err) { console.warn('delete api failed', err); }
+                        // 后备：本地清理（兼容旧版）
                         try {
                             let merchants = JSON.parse(localStorage.getItem('merchantHotels') || '[]');
                             merchants = merchants.filter(h => h.id !== id);
@@ -542,45 +588,13 @@
                 // 提交接口请求
                 submitHotelData(formData)
                     .then(res => {
-                        alert(res.msg || '操作成功！');
-                        // 将单图持久化到 localStorage（按酒店ID）
-                        const savedId = formData.id && formData.id > 0 ? formData.id : (editHotelId || 0);
-                        const key = 'hotelImage:' + (savedId > 0 ? savedId : formData.id);
-                        if (formData.image) {
-                            localStorage.setItem(key, formData.image);
-                        } else {
-                            // 未上传则不写入，让详情页走默认图
+                        alert((res && res.msg) || '操作成功！');
+                        // 使用后端返回的 id 优先保存图片和清理草稿
+                        const returnedId = (res && res.data && res.data.id) ? res.data.id : (formData.id || editHotelId || 0);
+                        if (returnedId > 0 && formData.image) {
+                            try { localStorage.setItem('hotelImage:' + returnedId, formData.image); } catch(e) {}
                         }
-                        // 若为新增，写入管理员审核队列
-                        try {
-                            const submissionsKey = 'merchantHotels';
-                            const list = JSON.parse(localStorage.getItem(submissionsKey) || '[]');
-                            // 新增模式：editHotelId为0或formData.id为新生成
-                            const isNew = !isEdit || (formData.id && formData.id > 0 && editHotelId === 0);
-                            if (isNew) {
-                                        // 包含 priceData（若有）以便详情回显
-                                        list.push({
-                                            id: formData.id || Date.now(),
-                                            name: formData.name,
-                                            nameEn: formData.nameEn,
-                                            star: formData.star,
-                                            openTime: formData.openTime,
-                                            address: formData.address,
-                                            priceRange: formData.priceRange,
-                                            totalRooms: formData.totalRooms,
-                                            roomTypes: formData.roomTypes,
-                                            priceData: formData.priceData || { roomPriceList: [] },
-                                            image: formData.image || '',
-                                            status: 'pending',
-                                            createdBy: 'user',
-                                            createdAt: new Date().toISOString()
-                                        });
-                                localStorage.setItem(submissionsKey, JSON.stringify(list));
-                            }
-                        } catch (e) { /* 忽略localStorage异常 */ }
-                        // 提交成功后，移除房型草稿（若有）
-                        try { localStorage.removeItem('priceListDraft:' + (savedId || 0)); } catch(e) {}
-                        // 跳转回酒店列表页（自动刷新数据）
+                        try { localStorage.removeItem('priceListDraft:' + (returnedId || formData.id || 0)); } catch(e) {}
                         window.location.href = 'dashboard.html';
                     })
                     .catch(err => {
@@ -662,46 +676,62 @@
             };
         }
 
-        // ===================== 7. 提交数据（模拟接口 + 真实接口适配） =====================
-        function submitHotelData(formData) {
-            // 🔹 方式1：本地模拟接口（无需后端，直接测试用）
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    if (formData.id > 0) {
-                        // 模拟修改：更新本地数据源
-                        const index = hotelData.findIndex(item => item.id === formData.id);
-                        if (index > -1) {
-                            hotelData[index] = { ...hotelData[index], ...formData };
-                        }
-                        resolve({ code: 200, msg: '酒店信息修改成功！' });
-                    } else {
-                        // 模拟新增：生成新ID，添加到本地数据源
-                        const newId = hotelData.length > 0 ? Math.max(...hotelData.map(item => item.id)) + 1 : 1;
-                        formData.id = newId;
-                        hotelData.push(formData);
-                        resolve({ code: 200, msg: '酒店信息新增成功！' });
+        // ===================== 7. 提交数据（优先使用后端 API，失败回退至本地模拟） =====================
+        async function submitHotelData(formData) {
+            // 优先尝试调用后端接口：修改使用 PUT /api/hotels/:id，新建使用 POST /api/hotels
+            try {
+                if (formData.id && formData.id > 0) {
+                    const r = await fetch(`/api/hotels/${formData.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+                    const j = await r.json().catch(() => ({}));
+                    if (r.ok) {
+                        // ensure formData has updated id (should be same)
+                        if (j && j.data && j.data.id) formData.id = j.data.id;
+                        return j;
                     }
-                }, 500); // 模拟网络延迟
-            });
-
-            // 🔹 方式2：真实后端接口请求（替换上面的模拟代码即可）
-            // return fetch('/api/hotel/save', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json',
-            //         // 如需token认证，添加token
-            //         // 'Authorization': 'Bearer ' + localStorage.getItem('token')
-            //     },
-            //     body: JSON.stringify(formData)
-            // })
-            // .then(res => res.json())
-            // .then(data => {
-            //     if (data.code === 200) {
-            //         return data;
-            //     } else {
-            //         throw new Error(data.msg || '接口请求失败');
-            //     }
-            // });
+                    throw j;
+                } else {
+                    // 直接写入 hotels 表（跳过提交队列），便于商户即时保存
+                    const r = await fetch('/api/hotels', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(formData)
+                    });
+                    const j = await r.json().catch(() => ({}));
+                    if (r.ok) {
+                        if (j && j.data && j.data.id) formData.id = j.data.id;
+                        return j;
+                    }
+                    throw j;
+                }
+            } catch (apiErr) {
+                console.warn('submit api failed, falling back to local simulation', apiErr);
+                // 回退：本地模拟保存（保持原有演示逻辑）
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        if (formData.id > 0) {
+                            const index = hotelData.findIndex(item => item.id === formData.id);
+                            if (index > -1) hotelData[index] = { ...hotelData[index], ...formData };
+                            resolve({ code: 200, msg: '（本地回退）酒店信息修改成功！', data: formData });
+                        } else {
+                            const newId = hotelData.length > 0 ? Math.max(...hotelData.map(item => item.id)) + 1 : 1;
+                            formData.id = newId;
+                            hotelData.push(formData);
+                            // 作为回退，同时将提交放入本地 merchantHotels 队列以便演示
+                            try {
+                                const submissionsKey = 'merchantHotels';
+                                const list = JSON.parse(localStorage.getItem(submissionsKey) || '[]');
+                                list.push({ id: formData.id, name: formData.name, priceData: formData.priceData || { roomPriceList: [] }, image: formData.image || '', status: 'pending', createdAt: new Date().toISOString() });
+                                localStorage.setItem(submissionsKey, JSON.stringify(list));
+                            } catch (e) {}
+                            resolve({ code: 200, msg: '（本地回退）酒店信息新增成功！', data: formData });
+                        }
+                    }, 400);
+                });
+            }
         }
 
         // ===================== 8. 单图上传/预览/持久化 =====================
@@ -713,17 +743,29 @@
 
         function initImageSection() {
             const id = editHotelId || 0;
-            let stored = null;
-            if (id > 0) {
-                stored = localStorage.getItem('hotelImage:' + id);
-            }
-            const src = stored || (id > 0 ? getDefaultImage(id) : '');
-            if (src) {
-                hotelImage = src;
-                renderSinglePreview(src);
-            } else {
-                renderSinglePreview('');
-            }
+            // 若已在 loadHotelData 中回填了 image，直接使用；否则尝试从后端获取，再退回到 localStorage
+            (async function(){
+                if (hotelImage) { renderSinglePreview(hotelImage); return; }
+                const id = editHotelId || 0;
+                if (id > 0) {
+                    try {
+                        const r = await fetch(`/api/hotels/${id}`);
+                        if (r.ok) {
+                            const j = await r.json();
+                            const h = j.data || {};
+                            if (h.image) { hotelImage = h.image; renderSinglePreview(hotelImage); return; }
+                        }
+                    } catch(e) { console.warn('fetch hotel image failed', e); }
+                    // 本地回退：localStorage
+                    try {
+                        const stored = localStorage.getItem('hotelImage:' + id);
+                        if (stored) { hotelImage = stored; renderSinglePreview(hotelImage); return; }
+                    } catch(e){}
+                    renderSinglePreview(getDefaultImage(id));
+                } else {
+                    renderSinglePreview('');
+                }
+            })();
         }
 
         function handleImageUploadSingle(event) {

@@ -1,4 +1,7 @@
 -- init_schema.sql: create tables for hotels, rooms, submissions, orders
+create database yisu_db;
+
+use yisu_db;
 
 CREATE TABLE IF NOT EXISTS hotels (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,

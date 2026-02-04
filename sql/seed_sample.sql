@@ -1,11 +1,6 @@
 -- seed_sample.sql: insert 3 sample hotels with rooms, one submission and sample orders
 USE `yisu_db`;
 
--- clean existing demo data (safe for dev)
-DELETE FROM orders;
-DELETE FROM rooms;
-DELETE FROM submissions;
-DELETE FROM hotels;
 
 -- Hotel A: 海景度假酒店
 INSERT INTO hotels (name,nameEn,star,openTime,address,priceRange,totalRooms,roomTypes,scenicSpots,trafficMall,discounts,image,priceData,createdBy,createdAt)

@@ -539,7 +539,7 @@
                 // 追加单图数据（DataURL）
                 formData.image = getCurrentImage();
 
-                // 提交接口请求
+                // 提交接口请求 
                 submitHotelData(formData)
                     .then(res => {
                         alert(res.msg || '操作成功！');

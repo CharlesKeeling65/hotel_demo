@@ -57,6 +57,8 @@ mysql  Ver 8.0.33 for Win64 on x86_64 (MySQL Community Server - GPL)
 
 #### 启动
 
+先配置一下.env文件，把里面的数据库端口号、user、密码改成自己的
+
 ```
 npm install;
 npm start;

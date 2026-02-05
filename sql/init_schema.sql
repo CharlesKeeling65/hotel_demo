@@ -1,5 +1,7 @@
 -- init_schema.sql: create tables for hotels, rooms, submissions, orders
-create database yisu_db;
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
+CREATE DATABASE IF NOT EXISTS yisu_db;
 
 use yisu_db;
 

@@ -36,7 +36,16 @@ async function initDbPool() {
     await tmpConn.end();
   }
 
-  pool = await mysql.createPool({ host: DB_HOST, port: DB_PORT, user: DB_USER, password: DB_PASS, database: DB_NAME, waitForConnections: true, connectionLimit: 10 });
+  pool = await mysql.createPool({
+    host: DB_HOST,
+    port: DB_PORT,
+    user: DB_USER,
+    password: DB_PASS,
+    database: DB_NAME,
+    waitForConnections: true,
+    connectionLimit: 10,
+    charset: 'utf8mb4'
+  });
   // ensure schema executed if file exists
   const schemaPath = path.join(__dirname, 'sql', 'init_schema.sql');
   if (fs.existsSync(schemaPath)) {

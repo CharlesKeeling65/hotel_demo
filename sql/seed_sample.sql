@@ -1,4 +1,6 @@
 -- seed_sample.sql: insert 3 sample hotels with rooms, one submission and sample orders
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
 USE `yisu_db`;
 
 
